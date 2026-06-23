@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 
 export function LoginPage() {
   const { login, sessionRevoked, clearSessionRevoked } = useAuth()
-  const { language } = useLanguage()
+  const { lang } = useLanguage()
   const navigate = useNavigate()
   const location = useLocation()
 
@@ -17,17 +17,17 @@ export function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   const t = {
-    title: language === 'UZ' ? 'Kirish' : 'Войти',
-    login: language === 'UZ' ? 'Login' : 'Логин',
-    password: language === 'UZ' ? 'Parol' : 'Пароль',
-    btn: language === 'UZ' ? 'Kirish' : 'Войти',
-    loading: language === 'UZ' ? 'Yuklanmoqda...' : 'Загрузка...',
+    title: lang === 'uz' ? 'Kirish' : 'Войти',
+    login: lang === 'uz' ? 'Login' : 'Логин',
+    password: lang === 'uz' ? 'Parol' : 'Пароль',
+    btn: lang === 'uz' ? 'Kirish' : 'Войти',
+    loading: lang === 'uz' ? 'Yuklanmoqda...' : 'Загрузка...',
     revoked:
-      language === 'UZ'
+      lang === 'uz'
         ? 'Boshqa qurilmadan kirildi. Faqat bitta odam bir vaqtda kira oladi.'
         : 'Вход с другого устройства. Только один пользователь может войти одновременно.',
     hint:
-      language === 'UZ'
+      lang === 'uz'
         ? 'Parolsiz faqat bosh sahifa ko\'rinadi'
         : 'Без пароля доступна только главная страница',
   }
@@ -51,7 +51,7 @@ export function LoginPage() {
       navigate(from, { replace: true })
     } catch {
       setError(
-        language === 'UZ' ? 'Login yoki parol noto\'g\'ri' : 'Неверный логин или пароль'
+        lang === 'uz' ? 'Login yoki parol noto\'g\'ri' : 'Неверный логин или пароль'
       )
     } finally {
       setLoading(false)
