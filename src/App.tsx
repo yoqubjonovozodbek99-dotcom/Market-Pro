@@ -6,7 +6,10 @@ import { Layout } from './components/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { SessionWatcher } from './components/SessionWatcher'
 import { HomePage } from './pages/HomePage'
-import { LessonsPage } from './pages/LessonsPage'
+import { LessonsHubPage } from './pages/LessonsHubPage'
+import { WrittenLessonsPage } from './pages/WrittenLessonsPage'
+import { WrittenModulePage } from './pages/WrittenModulePage'
+import { WrittenLessonPage } from './pages/WrittenLessonPage'
 import { VideoLessonsPage } from './pages/VideoLessonsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { LoginPage } from './pages/LoginPage'
@@ -19,13 +22,14 @@ export default function App() {
           <BrowserRouter basename={import.meta.env.PROD ? '/Market-Pro' : ''}>
             <SessionWatcher />
             <Routes>
-              {/* Login va Register — header/footer siz */}
               <Route path="/kirish" element={<LoginPage />} />
 
-              {/* Asosiy sahifalar — header/footer bilan */}
               <Route element={<Layout />}>
                 <Route path="/" element={<HomePage />} />
-                <Route path="/darslar" element={<ProtectedRoute><LessonsPage /></ProtectedRoute>} />
+                <Route path="/darslar" element={<ProtectedRoute><LessonsHubPage /></ProtectedRoute>} />
+                <Route path="/darslar/yozma" element={<ProtectedRoute><WrittenLessonsPage /></ProtectedRoute>} />
+                <Route path="/darslar/yozma/:moduleSlug" element={<ProtectedRoute><WrittenModulePage /></ProtectedRoute>} />
+                <Route path="/darslar/yozma/:moduleSlug/:lessonId" element={<ProtectedRoute><WrittenLessonPage /></ProtectedRoute>} />
                 <Route path="/video-darslar" element={<ProtectedRoute><VideoLessonsPage /></ProtectedRoute>} />
                 <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
               </Route>

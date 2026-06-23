@@ -1,0 +1,91 @@
+import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
+import { getWrittenLesson, getWrittenModule } from '../data/writtenLessons'
+import { LessonContent } from '../components/LessonContent'
+
+export function WrittenLessonPage() {
+  const { moduleSlug, lessonId } = useParams<{ moduleSlug: string; lessonId: string }>()
+  const { t, lang } = useLanguage()
+
+  const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
+  const lesson = moduleSlug && lessonId ? getWrittenLesson(moduleSlug, lessonId) : undefined
+
+  if (!mod || !lesson) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+        <p className="text-gray-500">{t.lessonsHub.notFound}</p>
+        <Link to="/darslar/yozma" className="text-uzum mt-4 inline-block">
+          {t.lessonsHub.backToWritten}
+        </Link>
+      </div>
+    )
+  }
+
+  const title = lang === 'uz' ? lesson.title : lesson.titleRu
+  const lessonIndex = mod.lessons.findIndex((l) => l.id === lesson.id)
+  const prev = lessonIndex > 0 ? mod.lessons[lessonIndex - 1] : null
+  const next = lessonIndex < mod.lessons.length - 1 ? mod.lessons[lessonIndex + 1] : null
+
+  return (
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 md:py-16">
+      <Link
+        to={`/darslar/yozma/${mod.slug}`}
+        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-uzum dark:hover:text-blue-400 mb-8"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        {lang === 'uz' ? mod.title : mod.titleRu}
+      </Link>
+
+      <header className="mb-10 pb-8 border-b border-gray-200 dark:border-gray-800">
+        <span className="text-sm font-medium text-uzum dark:text-blue-400">
+          {mod.num}-modul • {t.lessonsHub.lessonWord} {lesson.lessonNum}
+        </span>
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white mt-2 mb-4 leading-tight">
+          {title}
+        </h1>
+        <span className="text-sm text-gray-400 flex items-center gap-1">
+          <Clock className="w-4 h-4" />
+          {lesson.readTime}
+        </span>
+      </header>
+
+      <LessonContent blocks={lesson.blocks} />
+
+      <nav className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 grid sm:grid-cols-2 gap-4">
+        {prev ? (
+          <Link
+            to={`/darslar/yozma/${mod.slug}/${prev.id}`}
+            className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-uzum/50 transition-colors"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-xs text-gray-400">{t.lessonsHub.prevLesson}</span>
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                {lang === 'uz' ? prev.title : prev.titleRu}
+              </p>
+            </div>
+          </Link>
+        ) : (
+          <div />
+        )}
+        {next ? (
+          <Link
+            to={`/darslar/yozma/${mod.slug}/${next.id}`}
+            className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 dark:border-gray-800 hover:border-uzum/50 transition-colors sm:text-right sm:flex-row-reverse"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-400 shrink-0" />
+            <div className="min-w-0">
+              <span className="text-xs text-gray-400">{t.lessonsHub.nextLesson}</span>
+              <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                {lang === 'uz' ? next.title : next.titleRu}
+              </p>
+            </div>
+          </Link>
+        ) : (
+          <div />
+        )}
+      </nav>
+    </div>
+  )
+}

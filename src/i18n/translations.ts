@@ -97,6 +97,28 @@ export type TranslationKeys = {
     }
     enter: string
   }
+  lessonsHub: {
+    title: string
+    subtitle: string
+    writtenTitle: string
+    writtenDesc: string
+    videoTitle: string
+    videoDesc: string
+    openWritten: string
+    openVideo: string
+    lessonsInModule1: string
+    protectedNote: string
+    protectedDesc: string
+    backToHub: string
+    writtenPageDesc: string
+    comingSoon: string
+    available: string
+    lessonWord: string
+    notFound: string
+    backToWritten: string
+    prevLesson: string
+    nextLesson: string
+  }
   videos: {
     title: string
     subtitle: string
@@ -306,6 +328,28 @@ export const translations: Record<Language, TranslationKeys> = {
         ],
       },
       enter: 'Darslarni ko\'rish',
+    },
+    lessonsHub: {
+      title: 'Darslar',
+      subtitle: 'Yozma darslar va video darslar — barchasi bir joyda. Login qilmasdan bu bo\'limga kira olmaysiz.',
+      writtenTitle: 'Yozma darslar',
+      writtenDesc: 'Batafsil matn, bosqichma-bosqich ko\'rsatmalar va amaliy maslahatlar. Modulma-modul o\'qing.',
+      videoTitle: 'Video darslar',
+      videoDesc: '82 ta HD video — ekran yozuvi bilan amaliy darslar. Uzum va Yandex Market bo\'yicha.',
+      openWritten: 'Yozma darslarni ochish',
+      openVideo: 'Video darslarni ochish',
+      lessonsInModule1: 'dars (1-modul)',
+      protectedNote: 'Himoyalangan bo\'lim',
+      protectedDesc: 'Darslar, video va profil faqat login qilgan foydalanuvchilar uchun ochiq.',
+      backToHub: 'Darslar bo\'limiga qaytish',
+      writtenPageDesc: 'Modulni tanlang va darsma-dars o\'qing. Hozir 1-modul tayyor, qolganlari tez orada.',
+      comingSoon: 'Tez orada',
+      available: 'Tayyor',
+      lessonWord: 'dars',
+      notFound: 'Dars topilmadi',
+      backToWritten: 'Yozma darslarga qaytish',
+      prevLesson: 'Oldingi dars',
+      nextLesson: 'Keyingi dars',
     },
     videos: {
       title: 'Video darslar',
@@ -523,6 +567,28 @@ export const translations: Record<Language, TranslationKeys> = {
         ],
       },
       enter: 'Смотреть уроки',
+    },
+    lessonsHub: {
+      title: 'Уроки',
+      subtitle: 'Текстовые и видеоуроки в одном месте. Без входа этот раздел недоступен.',
+      writtenTitle: 'Текстовые уроки',
+      writtenDesc: 'Подробные тексты, пошаговые инструкции и практические советы.',
+      videoTitle: 'Видеоуроки',
+      videoDesc: '82 HD видео — практические уроки по Uzum и Yandex Market.',
+      openWritten: 'Открыть текстовые',
+      openVideo: 'Открыть видео',
+      lessonsInModule1: 'уроков (модуль 1)',
+      protectedNote: 'Защищённый раздел',
+      protectedDesc: 'Уроки, видео и профиль доступны только после входа.',
+      backToHub: 'Назад к разделу уроков',
+      writtenPageDesc: 'Выберите модуль. Сейчас готов модуль 1, остальные скоро.',
+      comingSoon: 'Скоро',
+      available: 'Готово',
+      lessonWord: 'урок',
+      notFound: 'Урок не найден',
+      backToWritten: 'К текстовым урокам',
+      prevLesson: 'Предыдущий',
+      nextLesson: 'Следующий',
     },
     videos: {
       title: 'Видеоуроки',
