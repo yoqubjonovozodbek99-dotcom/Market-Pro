@@ -1,0 +1,74 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-uzum: #0066ff;
+  --color-uzum-light: #e6f0ff;
+  --color-uzum-dark: #0047b3;
+  --color-yandex: #ffcc00;
+  --color-yandex-light: #fff8e1;
+  --color-yandex-dark: #e6b800;
+  --color-brand: #0057d9;
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    overflow-x: hidden;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply m-0 font-sans antialiased overflow-x-hidden;
+    min-height: 100dvh;
+  }
+
+  #root {
+    overflow-x: hidden;
+    min-height: 100dvh;
+  }
+
+  .dark body,
+  html.dark body {
+    @apply bg-gray-950 text-gray-100;
+  }
+
+  html:not(.dark) body {
+    @apply bg-gray-50 text-gray-900;
+  }
+
+  img,
+  video {
+    max-width: 100%;
+    height: auto;
+  }
+}
+
+@layer utilities {
+  .safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .safe-x {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+}
+
+@layer utilities {
+  .gradient-uzum {
+    background: linear-gradient(135deg, #0066ff 0%, #0047b3 100%);
+  }
+
+  .gradient-yandex {
+    background: linear-gradient(135deg, #ffcc00 0%, #e6b800 100%);
+  }
+
+  .gradient-brand {
+    background: linear-gradient(135deg, #0066ff 0%, #0057d9 50%, #0047b3 100%);
+  }
+}

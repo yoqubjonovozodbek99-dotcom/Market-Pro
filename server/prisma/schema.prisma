@@ -1,0 +1,184 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String            @id @default(cuid())
+  name          String
+  email         String            @unique
+  phone         String?
+  passwordHash  String
+  role          Role              @default(STUDENT)
+  language      Language          @default(UZ)
+  isBlocked     Boolean           @default(false)
+  isVerified    Boolean           @default(false)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  subscription  Subscription?
+  payments      Payment[]
+  sessions      UserSession[]
+  progress      LessonProgress[]
+  certificates  Certificate[]
+}
+
+enum Role {
+  STUDENT
+  MENTOR
+  ADMIN
+}
+
+enum Language {
+  UZ
+  RU
+}
+
+model Subscription {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  plan      Plan
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+enum Plan {
+  MONTHLY
+  THREE_MONTHS
+}
+
+model Course {
+  id          String   @id @default(cuid())
+  titleUz     String
+  titleRu     String
+  descUz      String
+  descRu      String
+  platform    Platform
+  isPublished Boolean  @default(false)
+  order       Int      @default(0)
+  modules     Module[]
+}
+
+enum Platform {
+  UZUM
+  YANDEX
+  BOTH
+}
+
+model Module {
+  id       String   @id @default(cuid())
+  courseId String
+  course   Course   @relation(fields: [courseId], references: [id])
+  titleUz  String
+  titleRu  String
+  order    Int
+  lessons  Lesson[]
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  moduleId    String
+  module      Module           @relation(fields: [moduleId], references: [id])
+  titleUz     String
+  titleRu     String
+  videoUrl    String?
+  duration    Int?
+  textUz      String?
+  textRu      String?
+  pdfUrl      String?
+  isFree      Boolean          @default(false)
+  order       Int
+  type        LessonType       @default(VIDEO)
+  progress    LessonProgress[]
+}
+
+enum LessonType {
+  VIDEO
+  TEXT
+  LIVE
+  QUIZ
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id])
+  isCompleted Boolean   @default(false)
+  watchedSec  Int       @default(0)
+  completedAt DateTime?
+  @@unique([userId, lessonId])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  user          User          @relation(fields: [userId], references: [id])
+  amount        Int
+  plan          Plan
+  status        PaymentStatus @default(PENDING)
+  screenshot    String?
+  confirmedBy   String?
+  confirmedAt   DateTime?
+  note          String?
+  createdAt     DateTime      @default(now())
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  ipAddress    String
+  userAgent    String
+  city         String?
+  country      String?
+  deviceId     String
+  isActive     Boolean  @default(true)
+  isSuspicious Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  lastSeenAt   DateTime @default(now())
+  @@unique([userId, deviceId])
+}
+
+model Certificate {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id])
+  courseId   String
+  pdfUrl     String
+  uniqueCode String   @unique
+  issuedAt   DateTime @default(now())
+}
+
+model LiveLesson {
+  id           String     @id @default(cuid())
+  titleUz      String
+  titleRu      String
+  courseId     String
+  mentorId     String
+  scheduledAt  DateTime
+  duration     Int
+  streamUrl    String?
+  recordingUrl String?
+  status       LiveStatus @default(SCHEDULED)
+  createdAt    DateTime   @default(now())
+}
+
+enum LiveStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+}
