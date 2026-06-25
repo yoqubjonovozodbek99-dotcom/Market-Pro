@@ -524,7 +524,7 @@ export const module1: WrittenModule = {
         },
         {
           type: 'p',
-          text: 'Tabriklaymiz! 1-modulni tugatdingiz. Endi siz marketplace mantiqini bilasiz, Uzum va Yandex Marketda kabinet ochish va birinchi mahsulotni joylashtirishni bilasiz. Keyingi modul — «Mahsulot tanlash (Niche research)» — tez orada qo\'shiladi.',
+          text: 'Tabriklaymiz! 1-modulni tugatdingiz. Endi siz marketplace mantiqini bilasiz, Uzum va Yandex Marketda kabinet ochish va birinchi mahsulotni joylashtirishni bilasiz. Keyingi modul — «Mahsulot tanlash (Niche research)» — yozma darslar bo\'limida mavjud.',
         },
         {
           type: 'tip',
