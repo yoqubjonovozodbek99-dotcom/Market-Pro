@@ -1,0 +1,9 @@
+Auth system with JWT and email notifications
+
+- Implement 6 auth endpoints (register, login, logout, refresh, forgot-password, reset-password)
+- Email notifications via Gmail SMTP
+- Session tracking with IP and device management
+- Protected routes on frontend
+- Logout functionality
+- Full TypeScript support
+- Comprehensive documentation

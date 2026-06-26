@@ -36,8 +36,8 @@ export default function App() {
               </Route>
             </Routes>
           </BrowserRouter>
-      <ChatBot />
-    </AuthProvider>
+          <ChatBot />
+        </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>
   )
