@@ -13,6 +13,7 @@ import { WrittenLessonPage } from './pages/WrittenLessonPage'
 import { VideoLessonsPage } from './pages/VideoLessonsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { LoginPage } from './pages/LoginPage'
+import { ChatBot } from './components/ChatBot'
 
 export default function App() {
   return (
@@ -35,7 +36,8 @@ export default function App() {
               </Route>
             </Routes>
           </BrowserRouter>
-        </AuthProvider>
+      <ChatBot />
+    </AuthProvider>
       </LanguageProvider>
     </ThemeProvider>
   )
