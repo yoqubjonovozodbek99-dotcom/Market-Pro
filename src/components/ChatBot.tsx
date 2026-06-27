@@ -10,7 +10,7 @@ Boshqa mavzularda: "Bu mavzu bo'yicha mentorga murojaat qiling: @Market_Pro_Acad
 O'zbek va Rus tillarida javob ber. Qisqa va aniq javob ber (maksimum 150 so'z).`
 
 export function ChatBot() {
-  const { language } = useLanguage()
+  const { lang } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<{role: string, text: string}[]>([])
   const [input, setInput] = useState('')
@@ -18,11 +18,11 @@ export function ChatBot() {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   const t = {
-    title:       language === 'UZ' ? 'MarketPro Yordamchi' : 'Помощник MarketPro',
-    placeholder: language === 'UZ' ? 'Savol yozing...' : 'Напишите вопрос...',
-    welcome:     language === 'UZ' ? 'Salom! Uzum Market yoki Yandex Market haqida savollaringizga javob beraman 😊' : 'Привет! Отвечу на вопросы об Uzum Market и Yandex Market 😊',
-    thinking:    language === 'UZ' ? 'Javob tayyorlanmoqda...' : 'Готовлю ответ...',
-    error:       language === 'UZ' ? 'Xatolik yuz berdi. Qaytadan urinib ko\'ring.' : 'Произошла ошибка. Попробуйте снова.',
+    title:       lang === 'uz' ? 'MarketPro Yordamchi' : 'Помощник MarketPro',
+    placeholder: lang === 'uz' ? 'Savol yozing...' : 'Напишите вопрос...',
+    welcome:     lang === 'uz' ? 'Salom! Uzum Market yoki Yandex Market haqida savollaringizga javob beraman 😊' : 'Привет! Отвечу на вопросы об Uzum Market и Yandex Market 😊',
+    thinking:    lang === 'uz' ? 'Javob tayyorlanmoqda...' : 'Готовлю ответ...',
+    error:       lang === 'uz' ? 'Xatolik yuz berdi. Qaytadan urinib ko\'ring.' : 'Произошла ошибка. Попробуйте снова.',
   }
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export function ChatBot() {
     setLoading(true)
 
     try {
-      const apiKey = import.meta.env.VITE_GEMINI_API_KEY
+      const apiKey = 'AQ.Ab8RN6K9YhGOkeAujPj5W0bfPiUD5vGsxrLiAwU--hcwp1645w'
       const res = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
