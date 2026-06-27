@@ -6,10 +6,8 @@ Faqat quyidagi mavzularda javob ber:
 - Uzum Market (ro'yxatdan o'tish, mahsulot yuklash, SEO, reklama, FBO/FBS, narx strategiyasi)
 - Yandex Market (akkaunt ochish, DBS/FBY/FBS, Yandex Direct, logistika)
 - Marketplace savdo (mahsulot tanlash, raqobat tahlili, daromad hisoblash)
-
 Boshqa mavzularda: "Bu mavzu bo'yicha mentorga murojaat qiling: @Market_Pro_Academy" de.
-O'zbek va Rus tillarida javob ber.
-Qisqa va aniq javob ber (maksimum 150 so'z).`
+O'zbek va Rus tillarida javob ber. Qisqa va aniq javob ber (maksimum 150 so'z).`
 
 export function ChatBot() {
   const { language } = useLanguage()
@@ -47,7 +45,7 @@ export function ChatBot() {
     try {
       const apiKey = import.meta.env.VITE_GEMINI_API_KEY
       const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -69,7 +67,6 @@ export function ChatBot() {
 
   return (
     <>
-      {/* Chat tugmasi */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         style={{
@@ -84,7 +81,6 @@ export function ChatBot() {
         {isOpen ? '✕' : '💬'}
       </button>
 
-      {/* Chat oynasi */}
       {isOpen && (
         <div style={{
           position: 'fixed', bottom: '90px', right: '24px',
@@ -94,7 +90,6 @@ export function ChatBot() {
           borderRadius: '16px', display: 'flex', flexDirection: 'column',
           boxShadow: '0 8px 32px rgba(0,0,0,0.4)', zIndex: 998, overflow: 'hidden'
         }}>
-          {/* Header */}
           <div style={{
             padding: '14px 16px', background: '#7c3aed',
             display: 'flex', alignItems: 'center', gap: '10px'
@@ -106,7 +101,6 @@ export function ChatBot() {
             </div>
           </div>
 
-          {/* Xabarlar */}
           <div style={{
             flex: 1, overflowY: 'auto', padding: '12px',
             display: 'flex', flexDirection: 'column', gap: '8px'
@@ -139,7 +133,6 @@ export function ChatBot() {
             <div ref={bottomRef} />
           </div>
 
-          {/* Input */}
           <div style={{
             padding: '10px 12px', borderTop: '1px solid rgba(255,255,255,0.1)',
             display: 'flex', gap: '8px'
