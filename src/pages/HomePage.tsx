@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import {
   Play,
   Users,
@@ -25,89 +25,39 @@ import { UzumLogo, YandexLogo } from '../components/Logo'
 
 const featureIcons = [Radio, Video, FileText, CheckCircle2, MessageCircle, Shield]
 
+// Bepul dars sanasi: 5-iyul 2026, soat 19:30
 const FREE_LESSON_DATE = new Date('2026-07-05T19:30:00')
 
-function FreeLessonSection({ lang, telegramChannel }: { lang: string; telegramChannel: string }) {
+function useCountdown(targetDate: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, started: false })
 
   useEffect(() => {
     const update = () => {
-      const diff = FREE_LESSON_DATE.getTime() - new Date().getTime()
+      const now = new Date()
+      const diff = targetDate.getTime() - now.getTime()
       if (diff <= 0) {
         setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, started: true })
         return
       }
       setTimeLeft({
-        days: Math.floor(diff / 86400000),
-        hours: Math.floor((diff / 3600000) % 24),
-        minutes: Math.floor((diff / 60000) % 60),
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
         seconds: Math.floor((diff / 1000) % 60),
         started: false,
       })
     }
     update()
-    const id = setInterval(update, 1000)
-    return () => clearInterval(id)
-  }, [])
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [targetDate])
 
-  const pad = (n: number) => String(n).padStart(2, '0')
-  const isUz = lang === 'uz'
-
-  return (
-    <section className="py-12 bg-gradient-to-br from-purple-600 to-blue-600">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-medium mb-4">
-          <Gift className="w-4 h-4" />
-          {isUz ? 'Bepul dars' : 'Бесплатный урок'}
-        </div>
-        <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
-          {isUz ? 'Uzum Marketda noldan boshlash' : 'Начало с нуля на Uzum Market'}
-        </h2>
-        <p className="text-white/80 mb-8 text-sm md:text-base">
-          {isUz ? '5-iyul 2026, soat 19:30 da boshlanadi' : '5 июля 2026, в 19:30'}
-        </p>
-        {timeLeft.started ? (
-          <div className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-2xl">
-            <Play className="w-6 h-6 text-purple-600" />
-            <span className="font-bold text-purple-600 text-lg">
-              {isUz ? 'Dars boshlandi!' : 'Урок начался!'}
-            </span>
-          </div>
-        ) : (
-          <>
-            <div className="flex items-center justify-center gap-3 md:gap-6 mb-8">
-              {[
-                { value: pad(timeLeft.days), label: isUz ? 'kun' : 'дней' },
-                { value: pad(timeLeft.hours), label: isUz ? 'soat' : 'часов' },
-                { value: pad(timeLeft.minutes), label: isUz ? 'daqiqa' : 'минут' },
-                { value: pad(timeLeft.seconds), label: isUz ? 'soniya' : 'секунд' },
-              ].map((item, i) => (
-                <div key={i} className="text-center">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-2">
-                    <span className="text-2xl md:text-3xl font-black text-white">{item.value}</span>
-                  </div>
-                  <span className="text-white/70 text-xs">{item.label}</span>
-                </div>
-              ))}
-            </div>
-            
-              href={telegramChannel}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-600 rounded-xl font-bold hover:bg-gray-50 transition-colors"
-            >
-              <Send className="w-5 h-5" />
-              {isUz ? "Telegram kanalga obuna bo'ling" : 'Подписаться на Telegram канал'}
-            </a>
-          </>
-        )}
-      </div>
-    </section>
-  )
+  return timeLeft
 }
 
 export function HomePage() {
   const { t, lang } = useLanguage()
+  const countdown = useCountdown(FREE_LESSON_DATE)
 
   const stats = [
     { value: siteConfig.targetStudents, label: t.stats.students, icon: Users },
@@ -117,6 +67,7 @@ export function HomePage() {
   ]
 
   const formatPrice = (n: number) => n.toLocaleString('uz-UZ')
+  const pad = (n: number) => String(n).padStart(2, '0')
 
   return (
     <div>
@@ -125,6 +76,7 @@ export function HomePage() {
         <div className="absolute inset-0 gradient-brand opacity-[0.04] dark:opacity-[0.08]" />
         <div className="absolute top-20 right-10 w-72 h-72 bg-uzum/10 rounded-full blur-3xl" />
         <div className="absolute bottom-10 left-10 w-56 h-56 bg-yandex/10 rounded-full blur-3xl" />
+
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-24 relative">
           <div className="max-w-3xl">
             <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-uzum/10 text-uzum dark:text-blue-400 text-sm font-medium mb-6">
@@ -184,9 +136,65 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Bepul dars */}
-      <FreeLessonSection lang={lang} telegramChannel={siteConfig.telegramChannel} />
+      {/* BEPUL DARS */}
+      <section className="py-12 bg-gradient-to-br from-purple-600 to-blue-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-medium mb-4">
+            <Gift className="w-4 h-4" />
+            {lang === 'uz' ? 'Bepul dars' : 'Бесплатный урок'}
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            {lang === 'uz'
+              ? 'Uzum Marketda noldan boshlash'
+              : 'Начало с нуля на Uzum Market'}
+          </h2>
+          <p className="text-white/80 mb-8 text-sm md:text-base">
+            {lang === 'uz'
+              ? '5-iyul 2026, soat 19:30 da boshlanadi'
+              : '5 июля 2026, в 19:30'}
+          </p>
 
+          {countdown.started ? (
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-2xl">
+              <Play className="w-6 h-6 text-purple-600" />
+              <span className="font-bold text-purple-600 text-lg">
+                {lang === 'uz' ? 'Dars boshlandi!' : 'Урок начался!'}
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-center gap-3 md:gap-6 mb-8">
+                {[
+                  { value: pad(countdown.days), label: lang === 'uz' ? 'kun' : 'дней' },
+                  { value: pad(countdown.hours), label: lang === 'uz' ? 'soat' : 'часов' },
+                  { value: pad(countdown.minutes), label: lang === 'uz' ? 'daqiqa' : 'минут' },
+                  { value: pad(countdown.seconds), label: lang === 'uz' ? 'soniya' : 'секунд' },
+                ].map((item, i) => (
+                  <div key={i} className="text-center">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-2">
+                      <span className="text-2xl md:text-3xl font-black text-white">{item.value}</span>
+                    </div>
+                    <span className="text-white/70 text-xs">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+              
+                href={siteConfig.telegramChannel}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-600 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+              >
+                <Send className="w-5 h-5" />
+                {lang === 'uz'
+                  ? 'Telegram kanalga obuna bo\'ling'
+                  : 'Подписаться на Telegram канал'}
+              </a>
+            </>
+          )}
+        </div>
+      </section>
+{/* Bepul dars */}
+<FreeLessonSection lang={lang} telegramChannel={siteConfig.telegramChannel} />
       {/* About */}
       <section className="py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -209,6 +217,7 @@ export function HomePage() {
             </h2>
             <p className="text-gray-500 dark:text-gray-400">{t.course.subtitle}</p>
           </div>
+
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             {[t.course.duration, t.course.format, t.course.live].map((item) => (
               <div
@@ -220,7 +229,10 @@ export function HomePage() {
               </div>
             ))}
           </div>
-          <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">8 {t.course.modules}</h3>
+
+          <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white">
+            8 {t.course.modules}
+          </h3>
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {t.modules.map((mod) => (
               <div
@@ -253,21 +265,34 @@ export function HomePage() {
             </h2>
             <p className="text-gray-500 dark:text-gray-400">{t.teachers.subtitle}</p>
           </div>
+
           <div className="grid md:grid-cols-2 gap-8">
             {teachers.map((teacher) => {
               const isUzum = teacher.platform === 'uzum'
               return (
                 <div
                   key={teacher.id}
-                  className={`rounded-2xl border-2 overflow-hidden ${isUzum ? 'border-uzum/30 dark:border-blue-500/30' : 'border-yandex/50 dark:border-yellow-500/30'}`}
+                  className={`rounded-2xl border-2 overflow-hidden ${
+                    isUzum
+                      ? 'border-uzum/30 dark:border-blue-500/30'
+                      : 'border-yandex/50 dark:border-yellow-500/30'
+                  }`}
                 >
-                  <div className={`p-6 ${isUzum ? 'gradient-uzum' : 'gradient-yandex'} ${isUzum ? 'text-white' : 'text-gray-900'}`}>
+                  <div
+                    className={`p-6 ${isUzum ? 'gradient-uzum' : 'gradient-yandex'} ${isUzum ? 'text-white' : 'text-gray-900'}`}
+                  >
                     <div className="flex items-center gap-4">
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold ${isUzum ? 'bg-white/20' : 'bg-gray-900/10'}`}>
+                      <div
+                        className={`w-16 h-16 rounded-2xl flex items-center justify-center text-2xl font-bold ${
+                          isUzum ? 'bg-white/20' : 'bg-gray-900/10'
+                        }`}
+                      >
                         {teacher.name.split(' ').map((n) => n[0]).join('')}
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold">{lang === 'uz' ? teacher.name : teacher.nameRu}</h3>
+                        <h3 className="text-xl font-bold">
+                          {lang === 'uz' ? teacher.name : teacher.nameRu}
+                        </h3>
                         <p className={`text-sm ${isUzum ? 'text-white/80' : 'text-gray-700'}`}>
                           {lang === 'uz' ? teacher.role : teacher.roleRu}
                         </p>
@@ -288,17 +313,25 @@ export function HomePage() {
                       {teacher.students > 0 && (
                         <div>
                           <span className="text-gray-500 block">{t.teachers.students}</span>
-                          <span className="font-semibold text-gray-900 dark:text-white">{teacher.students}+</span>
+                          <span className="font-semibold text-gray-900 dark:text-white">
+                            {teacher.students}+
+                          </span>
                         </div>
                       )}
                     </div>
                     <div>
-                      <span className="text-xs text-gray-500 uppercase tracking-wide">{t.teachers.specialty}</span>
+                      <span className="text-xs text-gray-500 uppercase tracking-wide">
+                        {t.teachers.specialty}
+                      </span>
                       <div className="flex flex-wrap gap-2 mt-2">
                         {(lang === 'uz' ? teacher.specialties : teacher.specialtiesRu).map((s) => (
                           <span
                             key={s}
-                            className={`px-3 py-1 rounded-full text-xs font-medium ${isUzum ? 'bg-uzum/10 text-uzum dark:bg-blue-500/15 dark:text-blue-400' : 'bg-yandex/20 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400'}`}
+                            className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              isUzum
+                                ? 'bg-uzum/10 text-uzum dark:bg-blue-500/15 dark:text-blue-400'
+                                : 'bg-yandex/20 text-yellow-700 dark:bg-yellow-500/15 dark:text-yellow-400'
+                            }`}
                           >
                             {s}
                           </span>
@@ -323,7 +356,10 @@ export function HomePage() {
             {t.features.items.map((item, i) => {
               const Icon = featureIcons[i]
               return (
-                <div key={item.title} className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                <div
+                  key={item.title}
+                  className="p-6 bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800"
+                >
                   <Icon className="w-10 h-10 text-uzum dark:text-blue-400 mb-4" />
                   <h3 className="font-bold text-gray-900 dark:text-white mb-2">{item.title}</h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{item.desc}</p>
@@ -338,9 +374,12 @@ export function HomePage() {
       <section className="py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">{t.pricing.title}</h2>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+              {t.pricing.title}
+            </h2>
             <p className="text-gray-500 dark:text-gray-400">{t.pricing.subtitle}</p>
           </div>
+
           <div className="grid md:grid-cols-2 gap-8 max-w-4xl mx-auto mb-10">
             <div className="p-8 rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
               <h3 className="font-bold text-lg mb-2">{t.pricing.monthly}</h3>
@@ -360,6 +399,7 @@ export function HomePage() {
               <div className="text-gray-500 text-sm mb-6">{t.pricing.oneTime}</div>
             </div>
           </div>
+
           <ul className="max-w-xl mx-auto space-y-3">
             {t.pricing.features.map((f) => (
               <li key={f} className="flex items-center gap-3 text-sm text-gray-700 dark:text-gray-300">
@@ -374,8 +414,12 @@ export function HomePage() {
       {/* Contact */}
       <section id="aloqa" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">{t.contact.title}</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto">{t.contact.subtitle}</p>
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+            {t.contact.title}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto">
+            {t.contact.subtitle}
+          </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
             
               href={siteConfig.telegramContact}
@@ -417,7 +461,9 @@ export function HomePage() {
       {/* FAQ */}
       <section className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
-          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">{t.faq.title}</h2>
+          <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
+            {t.faq.title}
+          </h2>
           <div className="space-y-4">
             {t.faq.items.map((item) => (
               <details key={item.q} className="group bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
@@ -425,7 +471,9 @@ export function HomePage() {
                   {item.q}
                   <span className="text-uzum group-open:rotate-45 transition-transform text-xl">+</span>
                 </summary>
-                <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">{item.a}</div>
+                <div className="px-6 pb-4 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {item.a}
+                </div>
               </details>
             ))}
           </div>
