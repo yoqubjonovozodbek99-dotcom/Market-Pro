@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { useState, useEffect } from 'react'
 import {
   Play,
   Users,
@@ -15,6 +16,7 @@ import {
   Send,
   Mail,
   Phone,
+  Gift,
 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { teachers } from '../data/content'
@@ -23,8 +25,39 @@ import { UzumLogo, YandexLogo } from '../components/Logo'
 
 const featureIcons = [Radio, Video, FileText, CheckCircle2, MessageCircle, Shield]
 
+// Bepul dars sanasi: 5-iyul 2026, soat 19:30
+const FREE_LESSON_DATE = new Date('2026-07-05T19:30:00')
+
+function useCountdown(targetDate: Date) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, started: false })
+
+  useEffect(() => {
+    const update = () => {
+      const now = new Date()
+      const diff = targetDate.getTime() - now.getTime()
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, started: true })
+        return
+      }
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
+        minutes: Math.floor((diff / (1000 * 60)) % 60),
+        seconds: Math.floor((diff / 1000) % 60),
+        started: false,
+      })
+    }
+    update()
+    const interval = setInterval(update, 1000)
+    return () => clearInterval(interval)
+  }, [targetDate])
+
+  return timeLeft
+}
+
 export function HomePage() {
   const { t, lang } = useLanguage()
+  const countdown = useCountdown(FREE_LESSON_DATE)
 
   const stats = [
     { value: siteConfig.targetStudents, label: t.stats.students, icon: Users },
@@ -34,6 +67,7 @@ export function HomePage() {
   ]
 
   const formatPrice = (n: number) => n.toLocaleString('uz-UZ')
+  const pad = (n: number) => String(n).padStart(2, '0')
 
   return (
     <div>
@@ -63,7 +97,7 @@ export function HomePage() {
                 {t.hero.cta}
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              <a
+              
                 href={siteConfig.telegramContact}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -72,7 +106,7 @@ export function HomePage() {
                 <Send className="w-5 h-5" />
                 {t.hero.telegram}
               </a>
-              <a
+              
                 href="#kurs"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors w-full sm:w-auto"
               >
@@ -99,6 +133,64 @@ export function HomePage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* BEPUL DARS */}
+      <section className="py-12 bg-gradient-to-br from-purple-600 to-blue-600">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-medium mb-4">
+            <Gift className="w-4 h-4" />
+            {lang === 'uz' ? 'Bepul dars' : 'Бесплатный урок'}
+          </div>
+          <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            {lang === 'uz'
+              ? 'Uzum Marketda noldan boshlash'
+              : 'Начало с нуля на Uzum Market'}
+          </h2>
+          <p className="text-white/80 mb-8 text-sm md:text-base">
+            {lang === 'uz'
+              ? '5-iyul 2026, soat 19:30 da boshlanadi'
+              : '5 июля 2026, в 19:30'}
+          </p>
+
+          {countdown.started ? (
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-2xl">
+              <Play className="w-6 h-6 text-purple-600" />
+              <span className="font-bold text-purple-600 text-lg">
+                {lang === 'uz' ? 'Dars boshlandi!' : 'Урок начался!'}
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center justify-center gap-3 md:gap-6 mb-8">
+                {[
+                  { value: pad(countdown.days), label: lang === 'uz' ? 'kun' : 'дней' },
+                  { value: pad(countdown.hours), label: lang === 'uz' ? 'soat' : 'часов' },
+                  { value: pad(countdown.minutes), label: lang === 'uz' ? 'daqiqa' : 'минут' },
+                  { value: pad(countdown.seconds), label: lang === 'uz' ? 'soniya' : 'секунд' },
+                ].map((item, i) => (
+                  <div key={i} className="text-center">
+                    <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-2">
+                      <span className="text-2xl md:text-3xl font-black text-white">{item.value}</span>
+                    </div>
+                    <span className="text-white/70 text-xs">{item.label}</span>
+                  </div>
+                ))}
+              </div>
+              
+                href={siteConfig.telegramChannel}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-600 rounded-xl font-bold hover:bg-gray-50 transition-colors"
+              >
+                <Send className="w-5 h-5" />
+                {lang === 'uz'
+                  ? 'Telegram kanalga obuna bo\'ling'
+                  : 'Подписаться на Telegram канал'}
+              </a>
+            </>
+          )}
         </div>
       </section>
 
@@ -318,7 +410,7 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* Contact / Telegram */}
+      {/* Contact */}
       <section id="aloqa" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
@@ -327,9 +419,8 @@ export function HomePage() {
           <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-lg mx-auto">
             {t.contact.subtitle}
           </p>
-
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            <a
+            
               href={siteConfig.telegramContact}
               target="_blank"
               rel="noopener noreferrer"
@@ -338,7 +429,7 @@ export function HomePage() {
               <Send className="w-6 h-6" />
               {t.contact.telegram}
             </a>
-            <a
+            
               href={siteConfig.telegramChannel}
               target="_blank"
               rel="noopener noreferrer"
@@ -348,30 +439,17 @@ export function HomePage() {
               {t.contact.telegramChannel}
             </a>
           </div>
-
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">{t.contact.telegramDesc}</p>
-
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-gray-600 dark:text-gray-400">
-            <a
-              href={`mailto:${siteConfig.email}`}
-              className="inline-flex items-center gap-2 hover:text-uzum dark:hover:text-blue-400 transition-colors"
-            >
+            <a href={`mailto:${siteConfig.email}`} className="inline-flex items-center gap-2 hover:text-uzum dark:hover:text-blue-400 transition-colors">
               <Mail className="w-4 h-4" />
               {siteConfig.email}
             </a>
-            <a
-              href={`tel:${siteConfig.phone.replace(/\s/g, '')}`}
-              className="inline-flex items-center gap-2 hover:text-uzum dark:hover:text-blue-400 transition-colors"
-            >
+            <a href={`tel:${siteConfig.phone.replace(/\s/g, '')}`} className="inline-flex items-center gap-2 hover:text-uzum dark:hover:text-blue-400 transition-colors">
               <Phone className="w-4 h-4" />
               {siteConfig.phone}
             </a>
-            <a
-              href={siteConfig.telegramContact}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 text-[#229ED9] font-medium hover:underline"
-            >
+            <a href={siteConfig.telegramContact} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 text-[#229ED9] font-medium hover:underline">
               <Send className="w-4 h-4" />
               {siteConfig.telegramContactHandle}
             </a>
@@ -387,10 +465,7 @@ export function HomePage() {
           </h2>
           <div className="space-y-4">
             {t.faq.items.map((item) => (
-              <details
-                key={item.q}
-                className="group bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800"
-              >
+              <details key={item.q} className="group bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
                 <summary className="px-6 py-4 cursor-pointer font-medium text-gray-900 dark:text-white list-none flex justify-between items-center">
                   {item.q}
                   <span className="text-uzum group-open:rotate-45 transition-transform text-xl">+</span>
@@ -418,7 +493,7 @@ export function HomePage() {
                 <Play className="w-5 h-5" />
                 {t.cta.button}
               </Link>
-              <a
+              
                 href={siteConfig.telegramContact}
                 target="_blank"
                 rel="noopener noreferrer"
