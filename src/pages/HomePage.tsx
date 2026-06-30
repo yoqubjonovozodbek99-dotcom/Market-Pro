@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState, useEffect } from 'react'
+import { AnimatedSection } from '../components/AnimatedSection'
 import {
   Play,
   Users,
@@ -27,6 +28,7 @@ const featureIcons = [Radio, Video, FileText, CheckCircle2, MessageCircle, Shiel
 
 // Bepul dars sanasi: 5-iyul 2026, soat 19:30
 const FREE_LESSON_DATE = new Date('2026-07-05T19:30:00')
+const ZOOM_LINK = 'https://us05web.zoom.us/j/89066980001?pwd=K6hJaCGkV7ZEcdJaUDsIckCSUEL9Dt.1'
 
 function useCountdown(targetDate: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, started: false })
@@ -97,7 +99,7 @@ export function HomePage() {
                 {t.hero.cta}
                 <ArrowRight className="w-5 h-5" />
               </Link>
-              
+              <a
                 href={siteConfig.telegramContact}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -106,23 +108,23 @@ export function HomePage() {
                 <Send className="w-5 h-5" />
                 {t.hero.telegram}
               </a>
-              
+              <a
                 href="#kurs"
                 className="inline-flex items-center justify-center gap-2 px-6 py-3.5 border-2 border-gray-200 dark:border-gray-700 rounded-xl font-semibold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors w-full sm:w-auto"
               >
                 {t.hero.ctaSecondary}
               </a>
             </div>
-            <div className="flex flex-col xs:flex-row flex-wrap gap-2 sm:gap-3">
+            <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
               <UzumLogo className="w-full sm:w-auto justify-center" />
               <YandexLogo className="w-full sm:w-auto justify-center" />
             </div>
           </div>
         </div>
-      </section>
+        </section>
 
       {/* Stats */}
-      <section className="border-y border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50">
+      <AnimatedSection className="border-y border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {stats.map((stat) => (
@@ -134,10 +136,10 @@ export function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* BEPUL DARS */}
-      <section className="py-12 bg-gradient-to-br from-purple-600 to-blue-600">
+      <AnimatedSection className="py-12 bg-gradient-to-br from-purple-600 to-blue-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-medium mb-4">
             <Gift className="w-4 h-4" />
@@ -155,12 +157,16 @@ export function HomePage() {
           </p>
 
           {countdown.started ? (
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-2xl">
-              <Play className="w-6 h-6 text-purple-600" />
-              <span className="font-bold text-purple-600 text-lg">
-                {lang === 'uz' ? 'Dars boshlandi!' : 'Урок начался!'}
-              </span>
-            </div>
+            <a href={ZOOM_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer"
+          >
+            <Play className="w-6 h-6 text-purple-600" />
+            <span className="font-bold text-purple-600 text-lg">
+              {lang === 'uz' ? 'Darsga kirish' : 'Войти на урок'}
+            </span>
+          </a>
           ) : (
             <>
               <div className="flex items-center justify-center gap-3 md:gap-6 mb-8">
@@ -178,7 +184,7 @@ export function HomePage() {
                   </div>
                 ))}
               </div>
-              
+              <a
                 href={siteConfig.telegramChannel}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -192,11 +198,10 @@ export function HomePage() {
             </>
           )}
         </div>
-      </section>
-{/* Bepul dars */}
-<FreeLessonSection lang={lang} telegramChannel={siteConfig.telegramChannel} />
+      </AnimatedSection>
+
       {/* About */}
-      <section className="py-16 md:py-20">
+      <AnimatedSection className="py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center max-w-2xl mx-auto mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
@@ -206,10 +211,10 @@ export function HomePage() {
             <p className="text-gray-600 dark:text-gray-400 leading-relaxed">{t.about.description}</p>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Course */}
-      <section id="kurs" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection id="kurs" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -254,10 +259,10 @@ export function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Teachers */}
-      <section className="py-16 md:py-20">
+      <AnimatedSection className="py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -344,10 +349,10 @@ export function HomePage() {
             })}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Features */}
-      <section className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 dark:text-white mb-12">
             {t.features.title}
@@ -368,10 +373,10 @@ export function HomePage() {
             })}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Pricing */}
-      <section className="py-16 md:py-20">
+      <AnimatedSection className="py-16 md:py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -409,10 +414,10 @@ export function HomePage() {
             ))}
           </ul>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* Contact */}
-      <section id="aloqa" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection id="aloqa" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
             {t.contact.title}
@@ -421,7 +426,7 @@ export function HomePage() {
             {t.contact.subtitle}
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8">
-            
+            <a
               href={siteConfig.telegramContact}
               target="_blank"
               rel="noopener noreferrer"
@@ -430,7 +435,7 @@ export function HomePage() {
               <Send className="w-6 h-6" />
               {t.contact.telegram}
             </a>
-            
+            <a
               href={siteConfig.telegramChannel}
               target="_blank"
               rel="noopener noreferrer"
@@ -456,10 +461,10 @@ export function HomePage() {
             </a>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* FAQ */}
-      <section className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
             {t.faq.title}
@@ -478,10 +483,10 @@ export function HomePage() {
             ))}
           </div>
         </div>
-      </section>
+      </AnimatedSection>
 
       {/* CTA */}
-      <section className="py-16 md:py-20">
+      <AnimatedSection className="py-16 md:py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <div className="gradient-brand rounded-3xl p-10 md:p-14 text-white shadow-2xl shadow-blue-500/20">
             <h2 className="text-3xl md:text-4xl font-bold mb-4">{t.cta.title}</h2>
@@ -494,7 +499,7 @@ export function HomePage() {
                 <Play className="w-5 h-5" />
                 {t.cta.button}
               </Link>
-              
+              <a
                 href={siteConfig.telegramContact}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -506,7 +511,7 @@ export function HomePage() {
             </div>
           </div>
         </div>
-      </section>
+      </AnimatedSection>
     </div>
   )
 }
