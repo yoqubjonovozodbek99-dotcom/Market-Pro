@@ -1,14 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 
-const SYSTEM_PROMPT = `Sen MarketPro Academy ning yordamchi botisan.
-Faqat quyidagi mavzularda javob ber:
-- Uzum Market (ro'yxatdan o'tish, mahsulot yuklash, SEO, reklama, FBO/FBS, narx strategiyasi)
-- Yandex Market (akkaunt ochish, DBS/FBY/FBS, Yandex Direct, logistika)
-- Marketplace savdo (mahsulot tanlash, raqobat tahlili, daromad hisoblash)
-Boshqa mavzularda: "Bu mavzu bo'yicha mentorga murojaat qiling: @Market_Pro_Academy" de.
-O'zbek va Rus tillarida javob ber. Qisqa va aniq javob ber (maksimum 150 so'z).`
-
 export function ChatBot() {
   const { lang } = useLanguage()
   const [isOpen, setIsOpen] = useState(false)
@@ -43,22 +35,21 @@ export function ChatBot() {
     setLoading(true)
 
     try {
-      const apiKey = 'AQ.Ab8RN6K9YhGOkeAujPj5W0bfPiUD5vGsxrLiAwU--hcwp1645w'
-      const res = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents: [{ parts: [{ text: userMsg }] }]
-          })
-        }
-      )
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: userMsg })
+      })
+      
+      if (!res.ok) {
+        throw new Error('API error')
+      }
+      
       const data = await res.json()
-      const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || t.error
+      const reply = data?.reply || t.error
       setMessages(prev => [...prev, { role: 'bot', text: reply }])
-    } catch {
+    } catch (error) {
+      console.error('Chat error:', error)
       setMessages(prev => [...prev, { role: 'bot', text: t.error }])
     } finally {
       setLoading(false)

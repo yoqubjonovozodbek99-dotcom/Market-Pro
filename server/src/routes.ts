@@ -420,4 +420,59 @@ router.get('/subscriptions', requireAuth, async (req, res) => {
   }
 })
 
+router.post('/chat', async (req, res) => {
+  try {
+    const { message } = req.body
+
+    if (!message || !message.trim()) {
+      return res.status(400).json({ error: 'Message is required' })
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY
+    if (!apiKey) {
+      return res.status(500).json({ error: 'API key not configured' })
+    }
+
+    const systemPrompt = `Sen MarketPro Academy ning yordamchi botisan.
+Faqat quyidagi mavzularda javob ber:
+- Uzum Market (ro'yxatdan o'tish, mahsulot yuklash, SEO, reklama, FBO/FBS, narx strategiyasi)
+- Yandex Market (akkaunt ochish, DBS/FBY/FBS, Yandex Direct, logistika)
+- Marketplace savdo (mahsulot tanlash, raqobat tahlili, daromad hisoblash)
+Boshqa mavzularda: "Bu mavzu bo'yicha mentorga murojaat qiling: @Market_Pro_Academy" de.
+O'zbek va Rus tillarida javob ber. Qisqa va aniq javob ber (maksimum 150 so'z).`
+
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents: [{ parts: [{ text: message }] }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 150,
+          },
+        }),
+      }
+    )
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Gemini API error:', error)
+      return res.status(response.status).json({ error: 'API request failed' })
+    }
+
+    const data = await response.json()
+    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Javob tayyorlanmadi'
+
+    res.json({ reply })
+  } catch (error) {
+    console.error('Chat error:', error)
+    res.status(500).json({ error: 'Failed to process message' })
+  }
+})
+
 export default router
