@@ -129,6 +129,7 @@ export function VideoLessonsPage() {
       <p className="text-center text-sm text-gray-400 mt-10">
         {filtered.length} / {videoLessons.length} {t.stats.videos.toLowerCase()}
       </p>
+      </div>
     </div>
   )
 }
