@@ -86,6 +86,7 @@ export function WrittenLessonsPage() {
           )
         })}
       </div>
+      </div>
     </div>
   )
 }
