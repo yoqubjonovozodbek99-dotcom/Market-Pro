@@ -26,6 +26,13 @@ export const module1: WrittenModule = {
         },
         {
           type: 'image',
+          file: 'lessons/module-1/dars-01-uzum-sotish-jarayoni.jpg',
+          alt: 'Uzum Marketda sotish jarayoni',
+          caption:
+            'Uzum Marketda sotuvchi sifatida o\'z saytini yaratmasdan platform orqali xaridorlarga to\'g\'ridan-to\'g\'ri mahsulot sotish',
+        },
+        {
+          type: 'image',
           file: 'lessons/module-1/dars-01-marketplace-sxema.jpg',
           alt: 'Marketplace ishlash sxemasi',
           caption:
@@ -133,10 +140,10 @@ export const module1: WrittenModule = {
         },
         {
           type: 'image',
-          file: 'lessons/module-1/dars-02-uzum-roixat.jpg',
-          alt: 'Uzum Market ro\'yxatdan o\'tish sahifasi',
+          file: 'lessons/module-1/dars-02-birinchi-mahsulot.jpg',
+          alt: 'Birinchi mahsulot uchun taqolatlar ro\'yxati',
           caption:
-            'Rasm joylash: public/lessons/module-1/dars-02-uzum-roixat.jpg — ro\'yxatdan o\'tish formasi skrinshoti.',
+            'Birinchi mahsulotni joylashtirish uchun tekshiruv ro\'yxati va talab qilinadigan ma\'lumotlar',
         },
         {
           type: 'h2',
@@ -380,10 +387,10 @@ export const module1: WrittenModule = {
         },
         {
           type: 'image',
-          file: 'lessons/module-1/dars-06-yandex-biznes.jpg',
+          file: 'lessons/module-1/dars-04-yandex-biznes-akkaunt.jpg',
           alt: 'Yandex biznes-akkaunt ro\'yxati',
           caption:
-            'Rasm joylash: public/lessons/module-1/dars-06-yandex-biznes.jpg — partner kabinetiga kirish sahifasi.',
+            'Yandex biznes-akkaunt ochish uchun talab qilinadigan hujjatlar va bosqichlar',
         },
         {
           type: 'h2',
@@ -436,10 +443,10 @@ export const module1: WrittenModule = {
         },
         {
           type: 'image',
-          file: 'lessons/module-1/dars-07-dokon-sozlama.jpg',
+          file: 'lessons/module-1/dars-05-yandex-dokon-sozlamalari.jpg',
           alt: 'Yandex do\'kon sozlamalari',
           caption:
-            'Rasm joylash: public/lessons/module-1/dars-07-dokon-sozlama.jpg — sozlamalar paneli skrinshoti.',
+            'Yandex Marketda do\'kon sozlamalari va logistika shartlariga ta\'lim',
         },
         {
           type: 'h2',
@@ -501,10 +508,10 @@ export const module1: WrittenModule = {
         },
         {
           type: 'image',
-          file: 'lessons/module-1/dars-08-yuklash.jpg',
+          file: 'lessons/module-1/dars-06-mahsulot-yuklash.jpg',
           alt: 'Yandex mahsulot yuklash',
           caption:
-            'Rasm joylash: public/lessons/module-1/dars-08-yuklash.jpg — mahsulot yuklash formasi.',
+            'Yandex Marketda mahsulot kartochkasini yaratish va yuklash jarayoni',
         },
         {
           type: 'h2',
