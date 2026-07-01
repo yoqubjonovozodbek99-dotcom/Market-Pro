@@ -28,7 +28,8 @@
     overflow-x: hidden;
     min-height: 100dvh;
     position: relative;
-    background-image: url('/nature-bg.jpg');
+    --bg-image: url('/nature-bg.jpg');
+    background-image: var(--bg-image);
     background-attachment: fixed;
     background-size: cover;
     background-position: center;
@@ -42,7 +43,7 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-image: url('/nature-bg.jpg');
+    background-image: var(--bg-image);
     background-attachment: fixed;
     background-size: cover;
     background-position: center;
