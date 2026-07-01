@@ -13,11 +13,13 @@ export function WrittenLessonPage() {
 
   if (!mod || !lesson) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <p className="text-gray-500">{t.lessonsHub.notFound}</p>
-        <Link to="/darslar/yozma" className="text-uzum mt-4 inline-block">
-          {t.lessonsHub.backToWritten}
-        </Link>
+      <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+          <p className="text-gray-500">{t.lessonsHub.notFound}</p>
+          <Link to="/darslar/yozma" className="text-uzum mt-4 inline-block">
+            {t.lessonsHub.backToWritten}
+          </Link>
+        </div>
       </div>
     )
   }
@@ -28,14 +30,15 @@ export function WrittenLessonPage() {
   const next = lessonIndex < mod.lessons.length - 1 ? mod.lessons[lessonIndex + 1] : null
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 md:py-16">
-      <Link
-        to={`/darslar/yozma/${mod.slug}`}
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-uzum dark:hover:text-blue-400 mb-8"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        {lang === 'uz' ? mod.title : mod.titleRu}
-      </Link>
+    <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 md:py-16">
+        <Link
+          to={`/darslar/yozma/${mod.slug}`}
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-uzum dark:hover:text-blue-400 mb-8"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {lang === 'uz' ? mod.title : mod.titleRu}
+        </Link>
 
       <header className="mb-10 pb-8 border-b border-gray-200 dark:border-gray-800">
         <span className="text-sm font-medium text-uzum dark:text-blue-400">
@@ -86,6 +89,7 @@ export function WrittenLessonPage() {
           <div />
         )}
       </nav>
+      </div>
     </div>
   )
 }

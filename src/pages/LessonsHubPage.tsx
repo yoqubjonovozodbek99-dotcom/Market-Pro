@@ -9,13 +9,14 @@ export function LessonsHubPage() {
   const availableWritten = writtenModules.filter((m) => m.available).length
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-16">
-      <div className="text-center mb-12">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
-          {t.lessonsHub.title}
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">{t.lessonsHub.subtitle}</p>
-      </div>
+    <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-16">
+        <div className="text-center mb-12">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+            {t.lessonsHub.title}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400 max-w-2xl mx-auto">{t.lessonsHub.subtitle}</p>
+        </div>
 
       <div className="grid md:grid-cols-2 gap-8 mb-12">
         <Link

@@ -8,7 +8,7 @@ export function Footer() {
   const founderName = lang === 'uz' ? siteConfig.founder.name : siteConfig.founder.nameRu
 
   return (
-    <footer className="bg-gray-900 dark:bg-black text-gray-300 mt-auto pb-24 md:pb-0">
+    <footer className="bg-gray-900/80 dark:bg-black/80 backdrop-blur-sm text-gray-300 mt-auto pb-24 md:pb-0 border-t border-gray-700/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>

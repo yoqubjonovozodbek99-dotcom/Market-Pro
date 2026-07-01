@@ -74,7 +74,7 @@ export function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="absolute inset-0 gradient-brand opacity-[0.04] dark:opacity-[0.08]" />
         <div className="absolute top-20 right-10 w-72 h-72 bg-uzum/10 rounded-full blur-3xl" />
         <div className="absolute bottom-10 left-10 w-56 h-56 bg-yandex/10 rounded-full blur-3xl" />
@@ -124,7 +124,7 @@ export function HomePage() {
         </section>
 
       {/* Stats */}
-      <AnimatedSection className="border-y border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/50">
+      <AnimatedSection className="border-y border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {stats.map((stat) => (
@@ -214,7 +214,7 @@ export function HomePage() {
       </AnimatedSection>
 
       {/* Course */}
-      <AnimatedSection id="kurs" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection id="kurs" className="py-16 md:py-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -352,7 +352,7 @@ export function HomePage() {
       </AnimatedSection>
 
       {/* Features */}
-      <AnimatedSection className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection className="py-16 md:py-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl md:text-4xl font-bold text-center text-gray-900 dark:text-white mb-12">
             {t.features.title}
@@ -376,7 +376,7 @@ export function HomePage() {
       </AnimatedSection>
 
       {/* Pricing */}
-      <AnimatedSection className="py-16 md:py-20">
+      <AnimatedSection className="py-16 md:py-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-12">
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -417,7 +417,7 @@ export function HomePage() {
       </AnimatedSection>
 
       {/* Contact */}
-      <AnimatedSection id="aloqa" className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection id="aloqa" className="py-16 md:py-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">
             {t.contact.title}
@@ -464,7 +464,7 @@ export function HomePage() {
       </AnimatedSection>
 
       {/* FAQ */}
-      <AnimatedSection className="py-16 md:py-20 bg-gray-100 dark:bg-gray-900/50">
+      <AnimatedSection className="py-16 md:py-20 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           <h2 className="text-3xl font-bold text-center text-gray-900 dark:text-white mb-10">
             {t.faq.title}

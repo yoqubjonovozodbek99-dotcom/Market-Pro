@@ -22,14 +22,15 @@ export function VideoLessonsPage() {
   ]
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-16">
-      <Link
-        to="/darslar"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-uzum dark:hover:text-blue-400 mb-8"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        {t.lessonsHub.backToHub}
-      </Link>
+    <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10 md:py-16">
+        <Link
+          to="/darslar"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-uzum dark:hover:text-blue-400 mb-8"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t.lessonsHub.backToHub}
+        </Link>
 
       <div className="mb-10">
         <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-3">

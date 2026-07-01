@@ -60,8 +60,8 @@ export function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
-      style={{ background: 'var(--bg-primary)' }}
+      className="min-h-screen flex items-center justify-center px-4 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm"
+      style={{ background: 'linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), var(--bg-primary)' }}
     >
       <div className="w-full max-w-md">
         <div className="text-center mb-8">

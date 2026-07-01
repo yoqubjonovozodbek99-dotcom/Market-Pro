@@ -16,11 +16,13 @@ export function WrittenModulePage() {
 
   if (!mod || !mod.available) {
     return (
-      <div className="max-w-3xl mx-auto px-4 py-16 text-center">
-        <p className="text-gray-500">{t.lessonsHub.notFound}</p>
-        <Link to="/darslar/yozma" className="text-uzum mt-4 inline-block">
-          {t.lessonsHub.backToWritten}
-        </Link>
+      <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+          <p className="text-gray-500">{t.lessonsHub.notFound}</p>
+          <Link to="/darslar/yozma" className="text-uzum mt-4 inline-block">
+            {t.lessonsHub.backToWritten}
+          </Link>
+        </div>
       </div>
     )
   }
@@ -29,14 +31,15 @@ export function WrittenModulePage() {
   const desc = lang === 'uz' ? mod.desc : mod.descRu
 
   return (
-    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 md:py-16">
-      <Link
-        to="/darslar/yozma"
-        className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-uzum dark:hover:text-blue-400 mb-8"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        {t.lessonsHub.backToWritten}
-      </Link>
+    <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 md:py-16">
+        <Link
+          to="/darslar/yozma"
+          className="inline-flex items-center gap-2 text-sm text-gray-500 hover:text-uzum dark:hover:text-blue-400 mb-8"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          {t.lessonsHub.backToWritten}
+        </Link>
 
       <div className="mb-10">
         <span className="text-sm font-bold text-uzum dark:text-blue-400">
@@ -82,6 +85,7 @@ export function WrittenModulePage() {
             </Link>
           )
         })}
+      </div>
       </div>
     </div>
   )
