@@ -1,7 +1,7 @@
 import { type NextFunction, type Request, type Response } from 'express'
-import { prisma } from './prisma'
-import { getAuthHeaderValue, verifyToken } from './utils'
-import { isSessionActive } from './siteAuth'
+import { prisma } from './prisma.js'
+import { getAuthHeaderValue, verifyToken } from './utils.js'
+import { isSessionActive } from './siteAuth.js'
 
 export interface AuthRequest extends Request {
   userId?: string

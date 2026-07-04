@@ -1,10 +1,10 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-import { prisma } from './prisma'
-import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils'
-import { requireAuth, requireSiteAuth, type SiteAuthRequest } from './middleware'
-import { sendWelcomeEmail, sendPasswordResetEmail } from './email'
+import { prisma } from './prisma.js'
+import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils.js'
+import { requireAuth, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware.js'
+import { sendWelcomeEmail, sendPasswordResetEmail } from './email.js'
 import {
   createSiteSession,
   isSessionActive,
@@ -59,7 +59,7 @@ router.post('/auth/site-logout', requireSiteAuth, async (req: SiteAuthRequest, r
   }
 })
 
-router.get('/auth/site-session', requireSiteAuth, async (req, res) => {
+router.get('/auth/site-session', requireSiteAuth, async (req: SiteAuthRequest, res) => {
   res.json({ valid: true, sessionId: req.sessionId })
 })
 
@@ -172,7 +172,7 @@ router.post('/auth/login', async (req, res) => {
   }
 })
 
-router.post('/auth/logout', requireAuth, async (req, res) => {
+router.post('/auth/logout', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const { deviceId } = req.body
@@ -266,7 +266,7 @@ router.post('/auth/reset-password', async (req, res) => {
   }
 })
 
-router.get('/me', requireAuth, async (req, res) => {
+router.get('/me', requireAuth, async (req: AuthRequest, res) => {
   try {
     const user = req.user
     if (!user) return res.status(404).json({ error: 'User not found' })
@@ -284,7 +284,7 @@ router.get('/me', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/check-subscription', requireAuth, async (req, res) => {
+router.get('/check-subscription', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const subscription = await prisma.subscription.findUnique({ where: { userId } })
@@ -319,7 +319,7 @@ router.get('/courses', async (_req, res) => {
   }
 })
 
-router.post('/lessons/:lessonId/progress', requireAuth, async (req, res) => {
+router.post('/lessons/:lessonId/progress', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { lessonId } = req.params
     const { isCompleted, watchedSec } = req.body
@@ -348,7 +348,7 @@ router.post('/lessons/:lessonId/progress', requireAuth, async (req, res) => {
   }
 })
 
-router.post('/payments', requireAuth, async (req, res) => {
+router.post('/payments', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { amount, plan, screenshot, note } = req.body
     const userId = req.userId!
@@ -370,7 +370,7 @@ router.post('/payments', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/payments', requireAuth, async (req, res) => {
+router.get('/payments', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const payments = await prisma.payment.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
@@ -381,7 +381,7 @@ router.get('/payments', requireAuth, async (req, res) => {
   }
 })
 
-router.post('/subscriptions', requireAuth, async (req, res) => {
+router.post('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { plan, startDate, endDate } = req.body
     const userId = req.userId!
@@ -409,7 +409,7 @@ router.post('/subscriptions', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/subscriptions', requireAuth, async (req, res) => {
+router.get('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const subscription = await prisma.subscription.findUnique({ where: { userId } })
@@ -428,45 +428,75 @@ router.post('/chat', async (req, res) => {
       return res.status(400).json({ error: 'Message is required' })
     }
 
-    const apiKey = process.env.GEMINI_API_KEY
+    const apiKey = process.env.GROQ_API_KEY
     if (!apiKey) {
       return res.status(500).json({ error: 'API key not configured' })
     }
 
-    const systemPrompt = `Sen MarketPro Academy ning yordamchi botisan.
-Faqat quyidagi mavzularda javob ber:
-- Uzum Market (ro'yxatdan o'tish, mahsulot yuklash, SEO, reklama, FBO/FBS, narx strategiyasi)
-- Yandex Market (akkaunt ochish, DBS/FBY/FBS, Yandex Direct, logistika)
-- Marketplace savdo (mahsulot tanlash, raqobat tahlili, daromad hisoblash)
-Boshqa mavzularda: "Bu mavzu bo'yicha mentorga murojaat qiling: @Market_Pro_Academy" de.
-O'zbek va Rus tillarida javob ber. Qisqa va aniq javob ber (maksimum 150 so'z).`
+    const systemPrompt = `Sen MarketPro Academy kursi bo'yicha yordamchi botisan. Faqat quyidagi aniq ma'lumotlar asosida javob ber. Hech qachon narx, muddat yoki boshqa raqamlarni o'zingdan to'qib chiqarma.
 
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents: [{ parts: [{ text: message }] }],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 150,
-          },
-        }),
-      }
-    )
+KURS HAQIDA:
+- Nomi: MarketPro Academy — Uzum Market va Yandex Market bo'yicha savdo kursi
+- Davomiyligi: 3 oy (2 oy nazariy + 1 oy amaliy savdo)
+- Format: Haftada 3 kun jonli dars (har biri 2 soat), darslar yozib olinadi va istalgan vaqtda qayta ko'rish mumkin
+- Jami: 8 modul, 82 ta dars
+
+MODULLAR:
+1. Marketplace asoslari (8 dars, 3 soat)
+2. Mahsulot tanlash / Niche research (12 dars, 5 soat)
+3. Kartochka va SEO optimizatsiya (10 dars, 4 soat)
+4. Narx va raqobat strategiyasi (9 dars, 4 soat)
+5. Reklama va traffic (14 dars, 6 soat)
+6. Logistika va omborxona (8 dars, 3 soat)
+7. Tahlil va o'sish / Analytics (11 dars, 5 soat)
+8. Biznesni kengaytirish (10 dars, 4 soat)
+
+NARXLAR:
+- Oylik obuna: 510,000 so'm/oy
+- 3 oylik (bir yo'la to'lov): 1,377,000 so'm (10% chegirma bilan)
+
+KURSGA KIRADI:
+- 82 ta HD video dars
+- Haftada 3 marta jonli vebinar
+- PDF konspekt va cheat-sheet
+- Modul testlari va mentor yordami
+- Shaxsiy kabinet va progress kuzatuv
+- Ikki tilli interfeys (O'zbek/Rus)
+
+MENTOR BILAN BOG'LANISH:
+- Telefon: +998 97 372 70 06
+- Telegram: @Market_Pro_academiy
+
+QOIDALAR:
+- Faqat yuqoridagi ma'lumotlar asosida javob ber
+- Agar savol shu ro'yxatda yo'q narsaga tegishli bo'lsa, telefon raqami va Telegram orqali mentorga murojaat qilishni tavsiya qil
+- Hech qachon noaniq yoki taxminiy raqam bermang
+- O'zbek va Rus tillarida javob ber, foydalanuvchi qaysi tilda yozsa shu tilda javob ber
+- Javoblar qisqa va aniq bo'lsin (maksimum 150 so'z)`
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model: 'openai/gpt-oss-120b',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: message }
+        ]
+      }),
+    })
 
     if (!response.ok) {
       const error = await response.text()
-      console.error('Gemini API error:', error)
+      console.error('Groq API error:', error)
       return res.status(response.status).json({ error: 'API request failed' })
     }
 
-    const data = await response.json()
-    const reply = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Javob tayyorlanmadi'
+    const data = await response.json() as any
+    const reply = data?.choices?.[0]?.message?.content || 'Javob tayyorlanmadi'
 
     res.json({ reply })
   } catch (error) {

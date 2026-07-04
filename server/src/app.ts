@@ -1,7 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
-import router from './routes'
+import router from './routes.js'
 
 dotenv.config()
 
@@ -9,7 +9,7 @@ const app = express()
 const port = Number(process.env.PORT || 5000)
 
 app.use(cors({ 
-  origin: (origin, callback) => {
+  origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:5173',
