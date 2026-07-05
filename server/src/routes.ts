@@ -10,7 +10,7 @@ import {
   isSessionActive,
   revokeSession,
   validateSiteCredentials,
-} from './siteAuth'
+} from './siteAuth.js'
 
 const router = Router()
 
