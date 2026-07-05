@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken'
 import type { User } from '@prisma/client'
 
 export function signToken(payload: object, secret: string, expiresIn: string) {
-  return jwt.sign(payload, secret, { expiresIn })
+  return jwt.sign(payload, secret, { expiresIn } as jwt.SignOptions)
 }
 
 export function verifyToken<T = object>(token: string, secret: string): T {

@@ -32,6 +32,7 @@
     "@types/jsonwebtoken": "^9.0.2",
     "@types/multer": "^1.4.9",
     "@types/node": "^20.14.4",
+    "@types/nodemailer": "^8.0.1",
     "tsx": "^4.23.0"
   }
 }
