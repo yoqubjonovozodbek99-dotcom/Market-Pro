@@ -5,21 +5,16 @@ import { useAuth } from '../contexts/AuthContext'
 const PUBLIC_PATHS = ['/', '/kirish']
 
 export function SessionWatcher() {
-  const { isAuthenticated, sessionRevoked } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
 
   useEffect(() => {
+    if (isLoading) return
     if (!isAuthenticated && !PUBLIC_PATHS.includes(location.pathname)) {
       navigate('/kirish', { replace: true, state: { from: location.pathname } })
     }
-  }, [isAuthenticated, location.pathname, navigate])
-
-  useEffect(() => {
-    if (sessionRevoked && location.pathname !== '/kirish') {
-      navigate('/kirish', { replace: true })
-    }
-  }, [sessionRevoked, location.pathname, navigate])
+  }, [isAuthenticated, isLoading, location.pathname, navigate])
 
   return null
 }

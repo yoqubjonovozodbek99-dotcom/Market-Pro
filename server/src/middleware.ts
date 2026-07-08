@@ -40,6 +40,13 @@ export async function requireSiteAuth(req: SiteAuthRequest, res: Response, next:
   }
 }
 
+export async function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user || req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Faqat administrator uchun' })
+  }
+  next()
+}
+
 export async function requireAuth(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const token = getAuthHeaderValue(req.headers.authorization as string | undefined)

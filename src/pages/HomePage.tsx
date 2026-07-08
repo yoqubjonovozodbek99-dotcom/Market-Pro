@@ -26,9 +26,9 @@ import { UzumLogo, YandexLogo } from '../components/Logo'
 
 const featureIcons = [Radio, Video, FileText, CheckCircle2, MessageCircle, Shield]
 
-// Bepul dars sanasi: 5-iyul 2026, soat 19:30
-const FREE_LESSON_DATE = new Date('2026-07-05T19:30:00')
-const ZOOM_LINK = 'https://us05web.zoom.us/j/89066980001?pwd=K6hJaCGkV7ZEcdJaUDsIckCSUEL9Dt.1'
+// Bepul dars sanasi: 12-iyul 2026, soat 20:30
+const FREE_LESSON_DATE = new Date('2026-07-12T20:30:00')
+const ZOOM_LINK = 'https://meet.google.com/cvi-padf-faf'
 
 function useCountdown(targetDate: Date) {
   const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, started: false })
@@ -152,8 +152,8 @@ export function HomePage() {
           </h2>
           <p className="text-white/80 mb-8 text-sm md:text-base">
             {lang === 'uz'
-              ? '5-iyul 2026, soat 19:30 da boshlanadi'
-              : '5 июля 2026, в 19:30'}
+              ? '12-iyul 2026, soat 20:30 da boshlanadi'
+              : '12 июля 2026, в 20:30'}
           </p>
 
           {countdown.started ? (

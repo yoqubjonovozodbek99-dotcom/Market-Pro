@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { prisma } from './prisma.js'
 import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils.js'
-import { requireAuth, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware.js'
+import { requireAuth, requireAdmin, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware.js'
 import { sendWelcomeEmail, sendPasswordResetEmail } from './email.js'
 import {
   createSiteSession,
@@ -116,10 +116,13 @@ router.post('/auth/register', async (req, res) => {
 
     await sendWelcomeEmail(email, name)
 
-    const token = signToken({ userId: user.id }, process.env.JWT_SECRET!, process.env.JWT_EXPIRE || '15m')
-    const refreshToken = signToken({ userId: user.id }, process.env.JWT_REFRESH_SECRET!, process.env.JWT_REFRESH_EXPIRE || '30d')
-
-    res.status(201).json({ user: sanitizeUser(user), token, refreshToken })
+    // Ro'yxatdan o'tgan foydalanuvchi darhol tizimga kira olmaydi —
+    // administrator tasdiqlagunicha (isVerified=false) token berilmaydi.
+    res.status(201).json({
+      user: sanitizeUser(user),
+      pendingApproval: true,
+      message: "Ro'yxatdan o'tish muvaffaqiyatli. Hisobingiz administrator tomonidan tasdiqlanishini kuting.",
+    })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Registration failed' })
@@ -143,7 +146,14 @@ router.post('/auth/login', async (req, res) => {
     }
 
     if (user.isBlocked) {
-      return res.status(403).json({ error: 'User account is blocked' })
+      return res.status(403).json({ error: 'Hisobingiz bloklangan', code: 'BLOCKED' })
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        error: "Hisobingiz hali tasdiqlanmagan. Administrator ruxsat berguncha kuting.",
+        code: 'PENDING_APPROVAL',
+      })
     }
 
     await prisma.userSession.upsert({
@@ -283,6 +293,52 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: 'Unable to fetch user' })
   }
 })
+router.get('/me/progress', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!
+
+    const [progress, totalLessons, courses] = await Promise.all([
+      prisma.lessonProgress.findMany({
+        where: { userId },
+        include: { lesson: { include: { module: { include: { course: true } } } } },
+        orderBy: { completedAt: 'desc' },
+      }),
+      prisma.lesson.count(),
+      prisma.course.findMany({ include: { modules: { include: { lessons: true } } } }),
+    ])
+
+    const completed = progress.filter((p) => p.isCompleted)
+    const watchedSec = progress.reduce((sum, p) => sum + p.watchedSec, 0)
+
+    const platformBreakdown = (platform: 'UZUM' | 'YANDEX') => {
+      const lessonsOnPlatform = courses
+        .filter((c) => c.platform === platform || c.platform === 'BOTH')
+        .flatMap((c) => c.modules.flatMap((m) => m.lessons.map((l) => l.id)))
+      const completedIds = new Set(completed.map((p) => p.lessonId))
+      return {
+        total: lessonsOnPlatform.length,
+        completed: lessonsOnPlatform.filter((id) => completedIds.has(id)).length,
+      }
+    }
+
+    res.json({
+      totalLessons,
+      completedLessons: completed.length,
+      progressPercent: totalLessons ? Math.round((completed.length / totalLessons) * 100) : 0,
+      watchedSeconds: watchedSec,
+      uzum: platformBreakdown('UZUM'),
+      yandex: platformBreakdown('YANDEX'),
+      recentActivity: completed.slice(0, 5).map((p) => ({
+        lessonTitleUz: p.lesson.titleUz,
+        lessonTitleRu: p.lesson.titleRu,
+        completedAt: p.completedAt,
+      })),
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load progress' })
+  }
+})
 
 router.get('/check-subscription', requireAuth, async (req: AuthRequest, res) => {
   try {
@@ -417,6 +473,69 @@ router.get('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to load subscription' })
+  }
+})
+// ---- Admin: foydalanuvchilarni tasdiqlash ----
+
+router.get('/admin/users', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const status = (req.query.status as string) || 'pending'
+    const where = status === 'pending' ? { isVerified: false } : status === 'verified' ? { isVerified: true } : {}
+
+    const users = await prisma.user.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        language: true,
+        isVerified: true,
+        isBlocked: true,
+        createdAt: true,
+      },
+    })
+
+    res.json({ users })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load users' })
+  }
+})
+
+router.post('/admin/users/:id/approve', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params
+    const user = await prisma.user.update({ where: { id }, data: { isVerified: true } })
+    res.json({ user: sanitizeUser(user) })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to approve user' })
+  }
+})
+
+router.post('/admin/users/:id/reject', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params
+    await prisma.user.delete({ where: { id } })
+    res.json({ message: 'Foydalanuvchi rad etildi va o\'chirildi' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to reject user' })
+  }
+})
+
+router.post('/admin/users/:id/block', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params
+    const { isBlocked } = req.body
+    const user = await prisma.user.update({ where: { id }, data: { isBlocked: Boolean(isBlocked) } })
+    res.json({ user: sanitizeUser(user) })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to update block status' })
   }
 })
 

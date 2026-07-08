@@ -1,80 +1,74 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import {
-  getLocalSession,
-  isLocalSessionValid,
-  localLogin,
-  localLogout,
-  onSessionChange,
-  wasSessionRevoked,
-} from '../lib/siteAuthLocal'
+  ApiError,
+  clearTokens,
+  fetchMe,
+  getAccessToken,
+  loginUser,
+  logoutUser,
+  registerUser,
+  type ApiUser,
+} from '../api'
 
 interface AuthContextType {
-  user: { login: string } | null
+  user: ApiUser | null
   isLoading: boolean
   isAuthenticated: boolean
-  sessionRevoked: boolean
-  login: (login: string, password: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
+  register: (data: { name: string; email: string; phone?: string; password: string; language?: 'uz' | 'ru' }) => Promise<string>
   logout: () => Promise<void>
-  clearSessionRevoked: () => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<{ login: string } | null>(null)
+  const [user, setUser] = useState<ApiUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [sessionRevoked, setSessionRevoked] = useState(false)
 
-  const syncUser = useCallback(() => {
-    if (wasSessionRevoked()) {
-      localLogout()
-      sessionStorage.setItem('session_revoked', '1')
-      setSessionRevoked(true)
+  const loadUser = useCallback(async () => {
+    if (!getAccessToken()) {
       setUser(null)
       return
     }
-
-    const session = getLocalSession()
-    setUser(session ? { login: session.login } : null)
+    try {
+      const { user } = await fetchMe()
+      setUser(user)
+    } catch {
+      clearTokens()
+      setUser(null)
+    }
   }, [])
 
   useEffect(() => {
-    syncUser()
-    setIsLoading(false)
+    loadUser().finally(() => setIsLoading(false))
+  }, [loadUser])
 
-    return onSessionChange((revoked) => {
-      if (revoked) {
-        sessionStorage.setItem('session_revoked', '1')
-        setSessionRevoked(true)
-      }
-      setUser(null)
-    })
-  }, [syncUser])
+  const login = async (email: string, password: string) => {
+    await loginUser({ email, password })
+    await loadUser()
+  }
 
-  const login = async (loginName: string, password: string) => {
-    const session = localLogin(loginName, password)
-    setSessionRevoked(false)
-    setUser({ login: session.login })
+  // Ro'yxatdan o'tish natijasida foydalanuvchi darhol kirmaydi —
+  // xabar qaytaramiz, LoginPage uni "kutilmoqda" ekranida ko'rsatadi.
+  const register = async (data: { name: string; email: string; phone?: string; password: string; language?: 'uz' | 'ru' }) => {
+    const result = await registerUser(data)
+    return result.message
   }
 
   const logout = async () => {
-    localLogout()
+    await logoutUser()
     setUser(null)
-    setSessionRevoked(false)
   }
-
-  const clearSessionRevoked = () => setSessionRevoked(false)
 
   return (
     <AuthContext.Provider
       value={{
         user,
         isLoading,
-        isAuthenticated: !!user && isLocalSessionValid(),
-        sessionRevoked,
+        isAuthenticated: !!user,
         login,
+        register,
         logout,
-        clearSessionRevoked,
       }}
     >
       {children}
@@ -87,3 +81,5 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within AuthProvider')
   return context
 }
+
+export { ApiError }

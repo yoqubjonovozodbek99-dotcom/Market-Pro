@@ -1,54 +1,69 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 const ACCESS_TOKEN_KEY = 'marketpro_access_token'
+const REFRESH_TOKEN_KEY = 'marketpro_refresh_token'
 
-export interface SiteAuthUser {
-  login: string
+export interface ApiUser {
+  id: string
+  name: string
+  email: string
+  phone?: string | null
+  role: 'STUDENT' | 'MENTOR' | 'ADMIN'
+  language: 'UZ' | 'RU'
+  isVerified: boolean
+  isBlocked: boolean
+  createdAt: string
 }
 
-interface SiteLoginResponse {
+interface AuthResponse {
+  user: ApiUser
   token: string
-  login: string
+  refreshToken: string
+  deviceId?: string
+}
+
+interface RegisterResponse {
+  user: ApiUser
+  pendingApproval: true
   message: string
 }
 
-interface SiteCheckResponse {
-  valid: boolean
+export class ApiError extends Error {
   code?: string
-  message?: string
+  status: number
+  constructor(message: string, status: number, code?: string) {
+    super(message)
+    this.status = status
+    this.code = code
+  }
 }
 
 function getAccessToken() {
   return localStorage.getItem(ACCESS_TOKEN_KEY)
 }
 
-function setToken(token: string) {
+function setTokens(token: string, refreshToken?: string) {
   localStorage.setItem(ACCESS_TOKEN_KEY, token)
+  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken)
 }
 
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
 }
 
-function buildHeaders(contentType = true) {
+function buildHeaders(hasBody: boolean) {
   const headers: Record<string, string> = {}
   const token = getAccessToken()
-
-  if (contentType) {
-    headers['Content-Type'] = 'application/json'
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
+  if (hasBody) headers['Content-Type'] = 'application/json'
+  if (token) headers.Authorization = `Bearer ${token}`
   return headers
 }
 
-async function request<T>(path: string, options: RequestInit = {}) {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const init: RequestInit = {
     ...options,
     headers: {
-      ...buildHeaders(options.body ? true : false),
+      ...buildHeaders(Boolean(options.body)),
       ...(options.headers ?? {}),
     },
   }
@@ -57,69 +72,89 @@ async function request<T>(path: string, options: RequestInit = {}) {
   const body = await response.json().catch(() => null)
 
   if (!response.ok) {
-    const error = new Error(body?.error ?? body?.message ?? response.statusText) as Error & {
-      code?: string
-    }
-    error.code = body?.code
-    throw error
+    throw new ApiError(body?.error ?? body?.message ?? response.statusText, response.status, body?.code)
   }
 
   return body as T
 }
 
-async function requestAllow401<T>(path: string, options: RequestInit = {}) {
-  const init: RequestInit = {
-    ...options,
-    headers: {
-      ...buildHeaders(false),
-      ...(options.headers ?? {}),
-    },
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, init)
-  const body = await response.json().catch(() => null)
-  return { ok: response.ok, status: response.status, body: body as T }
-}
-
-export async function siteLogin(data: { login: string; password: string }) {
-  const result = await request<SiteLoginResponse>('/api/auth/site-login', {
+export async function registerUser(data: {
+  name: string
+  email: string
+  phone?: string
+  password: string
+  language?: 'uz' | 'ru'
+}) {
+  return request<RegisterResponse>('/api/auth/register', {
     method: 'POST',
     body: JSON.stringify(data),
   })
-  setToken(result.token)
+}
+
+export async function loginUser(data: { email: string; password: string }) {
+  const deviceId = getOrCreateDeviceId()
+  const result = await request<AuthResponse>('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ ...data, deviceId }),
+  })
+  setTokens(result.token, result.refreshToken)
   return result
 }
 
-export async function siteLogout() {
+export async function logoutUser() {
   try {
-    await request<{ message: string }>('/api/auth/site-logout', { method: 'POST' })
+    const deviceId = localStorage.getItem('marketpro_device_id')
+    await request('/api/auth/logout', { method: 'POST', body: JSON.stringify({ deviceId }) })
   } catch {
-    // sessiya allaqachon bekor qilingan bo'lishi mumkin
+    // token allaqachon eskirgan bo'lishi mumkin, baribir tozalaymiz
   } finally {
     clearTokens()
   }
 }
 
-export async function checkSiteSession(): Promise<SiteCheckResponse & { revoked?: boolean }> {
-  const token = getAccessToken()
-  if (!token) {
-    return { valid: false, code: 'NO_TOKEN' }
-  }
-
-  const { ok, body } = await requestAllow401<SiteCheckResponse>('/api/auth/site-check')
-  if (!ok) {
-    return {
-      valid: false,
-      code: body?.code,
-      message: body?.message,
-      revoked: body?.code === 'SESSION_REVOKED',
-    }
-  }
-  return { valid: true }
+export async function fetchMe() {
+  return request<{ user: ApiUser; subscription: unknown; isSubscribed: boolean }>('/api/me')
 }
 
-export async function getCourses() {
-  return request<{ courses: unknown[] }>('/api/courses')
+export interface ProgressSummary {
+  totalLessons: number
+  completedLessons: number
+  progressPercent: number
+  watchedSeconds: number
+  uzum: { total: number; completed: number }
+  yandex: { total: number; completed: number }
+  recentActivity: { lessonTitleUz: string; lessonTitleRu: string; completedAt: string }[]
+}
+
+export async function fetchMyProgress() {
+  return request<ProgressSummary>('/api/me/progress')
+}
+
+// ---- Admin ----
+
+export async function fetchPendingUsers() {
+  return request<{ users: ApiUser[] }>('/api/admin/users?status=pending')
+}
+
+export async function fetchAllUsers() {
+  return request<{ users: ApiUser[] }>('/api/admin/users?status=all')
+}
+
+export async function approveUser(id: string) {
+  return request<{ user: ApiUser }>(`/api/admin/users/${id}/approve`, { method: 'POST' })
+}
+
+export async function rejectUser(id: string) {
+  return request<{ message: string }>(`/api/admin/users/${id}/reject`, { method: 'POST' })
+}
+
+function getOrCreateDeviceId() {
+  let deviceId = localStorage.getItem('marketpro_device_id')
+  if (!deviceId) {
+    deviceId = crypto.randomUUID()
+    localStorage.setItem('marketpro_device_id', deviceId)
+  }
+  return deviceId
 }
 
 export { getAccessToken }

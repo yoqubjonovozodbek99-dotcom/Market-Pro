@@ -12,6 +12,7 @@ import { WrittenModulePage } from './pages/WrittenModulePage'
 import { WrittenLessonPage } from './pages/WrittenLessonPage'
 import { VideoLessonsPage } from './pages/VideoLessonsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { AdminPage } from './pages/AdminPage'
 import { LoginPage } from './pages/LoginPage'
 import { ChatBot } from './components/ChatBot'
 
@@ -33,6 +34,7 @@ export default function App() {
                   <Route path="/darslar/yozma/:moduleSlug/:lessonId" element={<ProtectedRoute><WrittenLessonPage /></ProtectedRoute>} />
                   <Route path="/video-darslar" element={<ProtectedRoute><VideoLessonsPage /></ProtectedRoute>} />
                   <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                  <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
                 </Route>
               </Routes>
             </BrowserRouter>
