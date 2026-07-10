@@ -17,7 +17,7 @@ export function Header() {
     { to: '/', label: t.nav.home, end: true as const },
     { to: '/darslar', label: t.nav.lessons, end: false as const },
     { to: '/profil', label: t.nav.profile, end: false as const },
-    ...(user?.role === 'ADMIN' ? [{ to: '/admin', label: t.nav.admin, end: false as const }] : []),
+    ...(user ? [{ to: '/admin', label: t.nav.admin, end: false as const }] : []),
   ]
 
   const navClass = (to: string) =>

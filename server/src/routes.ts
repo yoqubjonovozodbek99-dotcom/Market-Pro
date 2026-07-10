@@ -1,16 +1,16 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-import { prisma } from './prisma.js'
-import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils.js'
-import { requireAuth, requireAdmin, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware.js'
-import { sendWelcomeEmail, sendPasswordResetEmail } from './email.js'
+import { prisma } from './prisma'
+import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils'
+import { requireAuth, requireSiteAuth, type SiteAuthRequest } from './middleware'
+import { sendWelcomeEmail, sendPasswordResetEmail } from './email'
 import {
   createSiteSession,
   isSessionActive,
   revokeSession,
   validateSiteCredentials,
-} from './siteAuth.js'
+} from './siteAuth'
 
 const router = Router()
 
@@ -59,7 +59,7 @@ router.post('/auth/site-logout', requireSiteAuth, async (req: SiteAuthRequest, r
   }
 })
 
-router.get('/auth/site-session', requireSiteAuth, async (req: SiteAuthRequest, res) => {
+router.get('/auth/site-session', requireSiteAuth, async (req, res) => {
   res.json({ valid: true, sessionId: req.sessionId })
 })
 
@@ -116,13 +116,10 @@ router.post('/auth/register', async (req, res) => {
 
     await sendWelcomeEmail(email, name)
 
-    // Ro'yxatdan o'tgan foydalanuvchi darhol tizimga kira olmaydi —
-    // administrator tasdiqlagunicha (isVerified=false) token berilmaydi.
-    res.status(201).json({
-      user: sanitizeUser(user),
-      pendingApproval: true,
-      message: "Ro'yxatdan o'tish muvaffaqiyatli. Hisobingiz administrator tomonidan tasdiqlanishini kuting.",
-    })
+    const token = signToken({ userId: user.id }, process.env.JWT_SECRET!, process.env.JWT_EXPIRE || '15m')
+    const refreshToken = signToken({ userId: user.id }, process.env.JWT_REFRESH_SECRET!, process.env.JWT_REFRESH_EXPIRE || '30d')
+
+    res.status(201).json({ user: sanitizeUser(user), token, refreshToken })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Registration failed' })
@@ -146,14 +143,7 @@ router.post('/auth/login', async (req, res) => {
     }
 
     if (user.isBlocked) {
-      return res.status(403).json({ error: 'Hisobingiz bloklangan', code: 'BLOCKED' })
-    }
-
-    if (!user.isVerified) {
-      return res.status(403).json({
-        error: "Hisobingiz hali tasdiqlanmagan. Administrator ruxsat berguncha kuting.",
-        code: 'PENDING_APPROVAL',
-      })
+      return res.status(403).json({ error: 'User account is blocked' })
     }
 
     await prisma.userSession.upsert({
@@ -182,7 +172,7 @@ router.post('/auth/login', async (req, res) => {
   }
 })
 
-router.post('/auth/logout', requireAuth, async (req: AuthRequest, res) => {
+router.post('/auth/logout', requireAuth, async (req, res) => {
   try {
     const userId = req.userId!
     const { deviceId } = req.body
@@ -276,7 +266,7 @@ router.post('/auth/reset-password', async (req, res) => {
   }
 })
 
-router.get('/me', requireAuth, async (req: AuthRequest, res) => {
+router.get('/me', requireAuth, async (req, res) => {
   try {
     const user = req.user
     if (!user) return res.status(404).json({ error: 'User not found' })
@@ -293,54 +283,8 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
     res.status(500).json({ error: 'Unable to fetch user' })
   }
 })
-router.get('/me/progress', requireAuth, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.userId!
 
-    const [progress, totalLessons, courses] = await Promise.all([
-      prisma.lessonProgress.findMany({
-        where: { userId },
-        include: { lesson: { include: { module: { include: { course: true } } } } },
-        orderBy: { completedAt: 'desc' },
-      }),
-      prisma.lesson.count(),
-      prisma.course.findMany({ include: { modules: { include: { lessons: true } } } }),
-    ])
-
-    const completed = progress.filter((p) => p.isCompleted)
-    const watchedSec = progress.reduce((sum, p) => sum + p.watchedSec, 0)
-
-    const platformBreakdown = (platform: 'UZUM' | 'YANDEX') => {
-      const lessonsOnPlatform = courses
-        .filter((c) => c.platform === platform || c.platform === 'BOTH')
-        .flatMap((c) => c.modules.flatMap((m) => m.lessons.map((l) => l.id)))
-      const completedIds = new Set(completed.map((p) => p.lessonId))
-      return {
-        total: lessonsOnPlatform.length,
-        completed: lessonsOnPlatform.filter((id) => completedIds.has(id)).length,
-      }
-    }
-
-    res.json({
-      totalLessons,
-      completedLessons: completed.length,
-      progressPercent: totalLessons ? Math.round((completed.length / totalLessons) * 100) : 0,
-      watchedSeconds: watchedSec,
-      uzum: platformBreakdown('UZUM'),
-      yandex: platformBreakdown('YANDEX'),
-      recentActivity: completed.slice(0, 5).map((p) => ({
-        lessonTitleUz: p.lesson.titleUz,
-        lessonTitleRu: p.lesson.titleRu,
-        completedAt: p.completedAt,
-      })),
-    })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to load progress' })
-  }
-})
-
-router.get('/check-subscription', requireAuth, async (req: AuthRequest, res) => {
+router.get('/check-subscription', requireAuth, async (req, res) => {
   try {
     const userId = req.userId!
     const subscription = await prisma.subscription.findUnique({ where: { userId } })
@@ -375,7 +319,7 @@ router.get('/courses', async (_req, res) => {
   }
 })
 
-router.post('/lessons/:lessonId/progress', requireAuth, async (req: AuthRequest, res) => {
+router.post('/lessons/:lessonId/progress', requireAuth, async (req, res) => {
   try {
     const { lessonId } = req.params
     const { isCompleted, watchedSec } = req.body
@@ -404,7 +348,7 @@ router.post('/lessons/:lessonId/progress', requireAuth, async (req: AuthRequest,
   }
 })
 
-router.post('/payments', requireAuth, async (req: AuthRequest, res) => {
+router.post('/payments', requireAuth, async (req, res) => {
   try {
     const { amount, plan, screenshot, note } = req.body
     const userId = req.userId!
@@ -426,7 +370,7 @@ router.post('/payments', requireAuth, async (req: AuthRequest, res) => {
   }
 })
 
-router.get('/payments', requireAuth, async (req: AuthRequest, res) => {
+router.get('/payments', requireAuth, async (req, res) => {
   try {
     const userId = req.userId!
     const payments = await prisma.payment.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
@@ -437,7 +381,7 @@ router.get('/payments', requireAuth, async (req: AuthRequest, res) => {
   }
 })
 
-router.post('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
+router.post('/subscriptions', requireAuth, async (req, res) => {
   try {
     const { plan, startDate, endDate } = req.body
     const userId = req.userId!
@@ -465,7 +409,7 @@ router.post('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
   }
 })
 
-router.get('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
+router.get('/subscriptions', requireAuth, async (req, res) => {
   try {
     const userId = req.userId!
     const subscription = await prisma.subscription.findUnique({ where: { userId } })
@@ -473,287 +417,6 @@ router.get('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to load subscription' })
-  }
-})
-// ---- Admin: foydalanuvchilarni tasdiqlash ----
-
-router.get('/admin/users', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  try {
-    const status = (req.query.status as string) || 'pending'
-    const where = status === 'pending' ? { isVerified: false } : status === 'verified' ? { isVerified: true } : {}
-
-    const users = await prisma.user.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        phone: true,
-        role: true,
-        language: true,
-        isVerified: true,
-        isBlocked: true,
-        createdAt: true,
-      },
-    })
-
-    res.json({ users })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to load users' })
-  }
-})
-
-router.post('/admin/users/:id/approve', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { id } = req.params
-    const user = await prisma.user.update({ where: { id }, data: { isVerified: true } })
-    res.json({ user: sanitizeUser(user) })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to approve user' })
-  }
-})
-
-router.post('/admin/users/:id/reject', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { id } = req.params
-    await prisma.user.delete({ where: { id } })
-    res.json({ message: 'Foydalanuvchi rad etildi va o\'chirildi' })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to reject user' })
-  }
-})
-
-router.post('/admin/users/:id/block', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { id } = req.params
-    const { isBlocked } = req.body
-    const user = await prisma.user.update({ where: { id }, data: { isBlocked: Boolean(isBlocked) } })
-    res.json({ user: sanitizeUser(user) })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to update block status' })
-  }
-})
-
-// ---- Admin: to'lovlar boshqaruvi ----
-
-router.get('/admin/payments', requireAuth, requireAdmin, async (_req, res) => {
-  try {
-    const payments = await prisma.payment.findMany({
-      orderBy: { createdAt: 'desc' },
-      include: {
-        user: {
-          select: { id: true, name: true, email: true, phone: true },
-        },
-      },
-    })
-    res.json({ payments })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to load payments' })
-  }
-})
-
-router.post('/admin/payments/:id/confirm', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { id } = req.params
-    const { startDate } = req.body // admin belgilagan boshlanish sanasi (ixtiyoriy)
-
-    const payment = await prisma.payment.findUnique({
-      where: { id },
-      include: { user: true },
-    })
-    if (!payment) return res.status(404).json({ error: 'Payment topilmadi' })
-    if (payment.status === 'CONFIRMED') return res.status(400).json({ error: 'Allaqachon tasdiqlangan' })
-
-    const planDays = payment.plan === 'THREE_MONTHS' ? 90 : 30
-    const start = startDate ? new Date(startDate) : new Date()
-    const end = new Date(start)
-    end.setDate(end.getDate() + planDays)
-
-    await prisma.$transaction([
-      prisma.payment.update({
-        where: { id },
-        data: { status: 'CONFIRMED', confirmedBy: req.userId!, confirmedAt: new Date() },
-      }),
-      prisma.subscription.upsert({
-        where: { userId: payment.userId },
-        create: {
-          userId: payment.userId,
-          plan: payment.plan,
-          startDate: start,
-          endDate: end,
-          isActive: true,
-        },
-        update: {
-          plan: payment.plan,
-          startDate: start,
-          endDate: end,
-          isActive: true,
-        },
-      }),
-    ])
-
-    res.json({ message: 'Tasdiqlandi', startDate: start, endDate: end })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to confirm payment' })
-  }
-})
-
-router.post('/admin/payments/:id/reject', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { id } = req.params
-    await prisma.payment.update({
-      where: { id },
-      data: { status: 'REJECTED' },
-    })
-    res.json({ message: 'Rad etildi' })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to reject payment' })
-  }
-})
-
-router.post('/chat', async (req, res) => {
-  try {
-    const { message } = req.body
-
-    if (!message || !message.trim()) {
-      return res.status(400).json({ error: 'Message is required' })
-    }
-
-    const apiKey = process.env.GROQ_API_KEY
-    if (!apiKey) {
-      return res.status(500).json({ error: 'API key not configured' })
-    }
-
-    const systemPrompt = `Sen MarketPro Academy kursi bo'yicha yordamchi botisan. Faqat quyidagi aniq ma'lumotlar asosida javob ber. Hech qachon narx, muddat yoki boshqa raqamlarni o'zingdan to'qib chiqarma.
-
-KURS HAQIDA:
-- Nomi: MarketPro Academy — Uzum Market va Yandex Market bo'yicha savdo kursi
-- Davomiyligi: 3 oy (2 oy nazariy + 1 oy amaliy savdo)
-- Format: Haftada 3 kun jonli dars (har biri 2 soat), darslar yozib olinadi va istalgan vaqtda qayta ko'rish mumkin
-- Jami: 8 modul, 82 ta dars
-
-MODULLAR:
-1. Marketplace asoslari (8 dars, 3 soat)
-2. Mahsulot tanlash / Niche research (12 dars, 5 soat)
-3. Kartochka va SEO optimizatsiya (10 dars, 4 soat)
-4. Narx va raqobat strategiyasi (9 dars, 4 soat)
-5. Reklama va traffic (14 dars, 6 soat)
-6. Logistika va omborxona (8 dars, 3 soat)
-7. Tahlil va o'sish / Analytics (11 dars, 5 soat)
-8. Biznesni kengaytirish (10 dars, 4 soat)
-
-NARXLAR:
-- Oylik obuna: 510,000 so'm/oy
-- 3 oylik (bir yo'la to'lov): 1,377,000 so'm (10% chegirma bilan)
-
-KURSGA KIRADI:
-- 82 ta HD video dars
-- Haftada 3 marta jonli vebinar
-- PDF konspekt va cheat-sheet
-- Modul testlari va mentor yordami
-- Shaxsiy kabinet va progress kuzatuv
-- Ikki tilli interfeys (O'zbek/Rus)
-
-MENTOR BILAN BOG'LANISH:
-- Telefon: +998 97 372 70 06
-- Telegram: @Market_Pro_academiy
-
-QOIDALAR:
-- Faqat yuqoridagi ma'lumotlar asosida javob ber
-- Agar savol shu ro'yxatda yo'q narsaga tegishli bo'lsa, telefon raqami va Telegram orqali mentorga murojaat qilishni tavsiya qil
-- Hech qachon noaniq yoki taxminiy raqam bermang
-- O'zbek va Rus tillarida javob ber, foydalanuvchi qaysi tilda yozsa shu tilda javob ber
-- Javoblar qisqa va aniq bo'lsin (maksimum 150 so'z)`
-
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        model: 'openai/gpt-oss-120b',
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: message }
-        ]
-      }),
-    })
-
-    if (!response.ok) {
-      const error = await response.text()
-      console.error('Groq API error:', error)
-      return res.status(response.status).json({ error: 'API request failed' })
-    }
-
-    const data = await response.json() as any
-    const reply = data?.choices?.[0]?.message?.content || 'Javob tayyorlanmadi'
-
-    res.json({ reply })
-  } catch (error) {
-    console.error('Chat error:', error)
-    res.status(500).json({ error: 'Failed to process message' })
-  }
-})
-
-// ---- Dars kunlari konfiguratsiyasi ----
-
-// Barcha konfiguratsiyalarni olish (public)
-router.get('/lesson-day-configs', async (_req, res) => {
-  try {
-    const configs = await prisma.lessonDayConfig.findMany()
-    const map: Record<string, number> = {}
-    for (const c of configs) {
-      map[c.lessonKey] = c.availableDay
-    }
-    res.json({ configs: map })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to load lesson day configs' })
-  }
-})
-
-// Admin: barcha konfiguratsiyalarni ro'yxatini olish
-router.get('/admin/lesson-day-configs', requireAuth, requireAdmin, async (_req, res) => {
-  try {
-    const configs = await prisma.lessonDayConfig.findMany({ orderBy: { lessonKey: 'asc' } })
-    res.json({ configs })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to load lesson day configs' })
-  }
-})
-
-// Admin: ommaviy yangilash (bulk upsert)
-router.post('/admin/lesson-day-configs/bulk', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
-  try {
-    const { configs } = req.body as { configs: { lessonKey: string; availableDay: number }[] }
-    if (!Array.isArray(configs)) {
-      return res.status(400).json({ error: 'configs massivi talab qilinadi' })
-    }
-
-    const results = await Promise.all(
-      configs.map((c) =>
-        prisma.lessonDayConfig.upsert({
-          where: { lessonKey: c.lessonKey },
-          create: { lessonKey: c.lessonKey, availableDay: Math.max(1, Number(c.availableDay) || 1) },
-          update: { availableDay: Math.max(1, Number(c.availableDay) || 1) },
-        })
-      )
-    )
-
-    res.json({ saved: results.length })
-  } catch (error) {
-    console.error(error)
-    res.status(500).json({ error: 'Failed to save lesson day configs' })
   }
 })
 

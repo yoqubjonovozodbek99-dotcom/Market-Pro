@@ -1,14 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
-import {
-  ApiError,
-  clearTokens,
-  fetchMe,
-  getAccessToken,
-  loginUser,
-  logoutUser,
-  registerUser,
-  type ApiUser,
-} from '../api'
+import { getAccessToken, loginUser, logoutUser, registerUser, fetchMe, type ApiUser, clearTokens } from '../api'
 
 interface AuthContextType {
   user: ApiUser | null
@@ -44,12 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadUser])
 
   const login = async (email: string, password: string) => {
-    await loginUser({ email, password })
-    await loadUser()
+    const result = await loginUser({ email, password })
+    setUser(result.user)
   }
 
-  // Ro'yxatdan o'tish natijasida foydalanuvchi darhol kirmaydi —
-  // xabar qaytaramiz, LoginPage uni "kutilmoqda" ekranida ko'rsatadi.
   const register = async (data: { name: string; email: string; phone?: string; password: string; language?: 'uz' | 'ru' }) => {
     const result = await registerUser(data)
     return result.message
@@ -81,5 +70,3 @@ export function useAuth() {
   if (!context) throw new Error('useAuth must be used within AuthProvider')
   return context
 }
-
-export { ApiError }
