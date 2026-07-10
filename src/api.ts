@@ -49,6 +49,7 @@ function setTokens(token: string, refreshToken?: string) {
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
+  localStorage.removeItem('marketpro_device_id') // Device ID-ni ham o'chir
 }
 
 function buildHeaders(hasBody: boolean) {
@@ -60,6 +61,10 @@ function buildHeaders(hasBody: boolean) {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  // Cache busting uchun timestamp qo'shami
+  const sep = path.includes('?') ? '&' : '?'
+  const fullPath = `${path}${sep}_t=${Date.now()}`
+  
   const init: RequestInit = {
     ...options,
     headers: {
@@ -68,7 +73,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     },
   }
 
-  const response = await fetch(`${API_BASE}${path}`, init)
+  const response = await fetch(`${API_BASE}${fullPath}`, init)
   const body = await response.json().catch(() => null)
 
   if (!response.ok) {
@@ -112,8 +117,23 @@ export async function logoutUser() {
   }
 }
 
+export interface ApiSubscription {
+  id: string
+  plan: 'MONTHLY' | 'THREE_MONTHS'
+  startDate: string
+  endDate: string
+  isActive: boolean
+}
+
 export async function fetchMe() {
-  return request<{ user: ApiUser; subscription: unknown; isSubscribed: boolean }>('/api/me')
+  return request<{ user: ApiUser; subscription: ApiSubscription | null; isSubscribed: boolean }>('/api/me')
+}
+
+export async function submitPayment(data: { amount: number; plan: 'MONTHLY' | 'THREE_MONTHS'; screenshot?: string; note?: string }) {
+  return request<{ payment: { id: string } }>('/api/payments', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
 }
 
 export interface ProgressSummary {
@@ -146,6 +166,53 @@ export async function approveUser(id: string) {
 
 export async function rejectUser(id: string) {
   return request<{ message: string }>(`/api/admin/users/${id}/reject`, { method: 'POST' })
+}
+
+// ---- Dars kunlari konfiguratsiyasi ----
+
+export async function fetchLessonDayConfigs() {
+  return request<{ configs: Record<string, number> }>('/api/lesson-day-configs')
+}
+
+export interface LessonDayConfigItem {
+  lessonKey: string
+  availableDay: number
+}
+
+export async function saveLessonDayConfigs(configs: LessonDayConfigItem[]) {
+  return request<{ saved: number }>('/api/admin/lesson-day-configs/bulk', {
+    method: 'POST',
+    body: JSON.stringify({ configs }),
+  })
+}
+
+// ---- Admin: to'lovlar ----
+
+export interface AdminPayment {
+  id: string
+  amount: number
+  plan: 'MONTHLY' | 'THREE_MONTHS'
+  status: 'PENDING' | 'CONFIRMED' | 'REJECTED'
+  screenshot?: string | null
+  note?: string | null
+  createdAt: string
+  confirmedAt?: string | null
+  user: { id: string; name: string; email: string; phone?: string | null }
+}
+
+export async function fetchAdminPayments() {
+  return request<{ payments: AdminPayment[] }>('/api/admin/payments')
+}
+
+export async function confirmPayment(id: string, startDate?: string) {
+  return request<{ message: string; startDate: string; endDate: string }>(
+    `/api/admin/payments/${id}/confirm`,
+    { method: 'POST', body: JSON.stringify({ startDate }) }
+  )
+}
+
+export async function rejectPayment(id: string) {
+  return request<{ message: string }>(`/api/admin/payments/${id}/reject`, { method: 'POST' })
 }
 
 function getOrCreateDeviceId() {

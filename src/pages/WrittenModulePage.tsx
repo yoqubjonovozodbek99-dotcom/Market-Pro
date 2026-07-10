@@ -1,7 +1,10 @@
+import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Clock, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Clock, ChevronRight, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
 import { getWrittenModule } from '../data/writtenLessons'
+import { fetchLessonDayConfigs, fetchMe } from '../api'
 
 const platformBadge = {
   uzum: 'Uzum Market',
@@ -9,10 +12,37 @@ const platformBadge = {
   both: 'Umumiy',
 }
 
+// Talabaning necha kun o'tganini va maksimum kunlarini hisoblaydi
+function calcAvailableDay(subscription: { startDate: string; endDate: string; isActive: boolean; plan: string } | null): number {
+  if (!subscription || !subscription.isActive) return 0
+  const start = new Date(subscription.startDate).getTime()
+  const now = Date.now()
+  if (now < start) return 0
+  const daysSince = Math.floor((now - start) / 86400000) + 1
+  const maxDays = subscription.plan === 'THREE_MONTHS' ? 90 : 30
+  return Math.min(daysSince, maxDays)
+}
+
 export function WrittenModulePage() {
   const { moduleSlug } = useParams<{ moduleSlug: string }>()
   const { t, lang } = useLanguage()
+  const { user } = useAuth()
   const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
+
+  const [dayConfigs, setDayConfigs] = useState<Record<string, number>>({})
+  const [availableUpTo, setAvailableUpTo] = useState<number>(0)
+  const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    Promise.all([fetchLessonDayConfigs(), user ? fetchMe() : Promise.resolve(null)])
+      .then(([configRes, meRes]) => {
+        setDayConfigs(configRes.configs)
+        const sub = (meRes as any)?.subscription ?? null
+        setAvailableUpTo(calcAvailableDay(sub))
+      })
+      .catch(() => {})
+      .finally(() => setLoaded(true))
+  }, [user])
 
   if (!mod || !mod.available) {
     return (
@@ -59,6 +89,33 @@ export function WrittenModulePage() {
         {mod.lessons.map((lesson, index) => {
           const lessonTitle = lang === 'uz' ? lesson.title : lesson.titleRu
           const badge = platformBadge[lesson.platform]
+          const requiredDay = dayConfigs[lesson.id] ?? 1
+          const isOpen = !loaded || availableUpTo >= requiredDay
+
+          if (!isOpen) {
+            return (
+              <div
+                key={lesson.id}
+                className="flex items-center gap-4 p-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 opacity-70 cursor-not-allowed"
+              >
+                <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center shrink-0">
+                  <Lock className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    {badge}
+                  </span>
+                  <h2 className="font-semibold text-gray-500 dark:text-gray-400 leading-snug">
+                    {lessonTitle}
+                  </h2>
+                  <span className="text-xs text-gray-400 mt-1 flex items-center gap-1">
+                    <Lock className="w-3 h-3" />
+                    {lang === 'uz' ? `${requiredDay}-kunda ochiladi` : `Откроется на ${requiredDay}-й день`}
+                  </span>
+                </div>
+              </div>
+            )
+          }
 
           return (
             <Link

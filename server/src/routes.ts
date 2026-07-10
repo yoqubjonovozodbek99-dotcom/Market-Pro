@@ -539,6 +539,86 @@ router.post('/admin/users/:id/block', requireAuth, requireAdmin, async (req: Aut
   }
 })
 
+// ---- Admin: to'lovlar boshqaruvi ----
+
+router.get('/admin/payments', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const payments = await prisma.payment.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        user: {
+          select: { id: true, name: true, email: true, phone: true },
+        },
+      },
+    })
+    res.json({ payments })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load payments' })
+  }
+})
+
+router.post('/admin/payments/:id/confirm', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params
+    const { startDate } = req.body // admin belgilagan boshlanish sanasi (ixtiyoriy)
+
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      include: { user: true },
+    })
+    if (!payment) return res.status(404).json({ error: 'Payment topilmadi' })
+    if (payment.status === 'CONFIRMED') return res.status(400).json({ error: 'Allaqachon tasdiqlangan' })
+
+    const planDays = payment.plan === 'THREE_MONTHS' ? 90 : 30
+    const start = startDate ? new Date(startDate) : new Date()
+    const end = new Date(start)
+    end.setDate(end.getDate() + planDays)
+
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id },
+        data: { status: 'CONFIRMED', confirmedBy: req.userId!, confirmedAt: new Date() },
+      }),
+      prisma.subscription.upsert({
+        where: { userId: payment.userId },
+        create: {
+          userId: payment.userId,
+          plan: payment.plan,
+          startDate: start,
+          endDate: end,
+          isActive: true,
+        },
+        update: {
+          plan: payment.plan,
+          startDate: start,
+          endDate: end,
+          isActive: true,
+        },
+      }),
+    ])
+
+    res.json({ message: 'Tasdiqlandi', startDate: start, endDate: end })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to confirm payment' })
+  }
+})
+
+router.post('/admin/payments/:id/reject', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params
+    await prisma.payment.update({
+      where: { id },
+      data: { status: 'REJECTED' },
+    })
+    res.json({ message: 'Rad etildi' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to reject payment' })
+  }
+})
+
 router.post('/chat', async (req, res) => {
   try {
     const { message } = req.body
@@ -621,6 +701,59 @@ QOIDALAR:
   } catch (error) {
     console.error('Chat error:', error)
     res.status(500).json({ error: 'Failed to process message' })
+  }
+})
+
+// ---- Dars kunlari konfiguratsiyasi ----
+
+// Barcha konfiguratsiyalarni olish (public)
+router.get('/lesson-day-configs', async (_req, res) => {
+  try {
+    const configs = await prisma.lessonDayConfig.findMany()
+    const map: Record<string, number> = {}
+    for (const c of configs) {
+      map[c.lessonKey] = c.availableDay
+    }
+    res.json({ configs: map })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load lesson day configs' })
+  }
+})
+
+// Admin: barcha konfiguratsiyalarni ro'yxatini olish
+router.get('/admin/lesson-day-configs', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const configs = await prisma.lessonDayConfig.findMany({ orderBy: { lessonKey: 'asc' } })
+    res.json({ configs })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load lesson day configs' })
+  }
+})
+
+// Admin: ommaviy yangilash (bulk upsert)
+router.post('/admin/lesson-day-configs/bulk', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { configs } = req.body as { configs: { lessonKey: string; availableDay: number }[] }
+    if (!Array.isArray(configs)) {
+      return res.status(400).json({ error: 'configs massivi talab qilinadi' })
+    }
+
+    const results = await Promise.all(
+      configs.map((c) =>
+        prisma.lessonDayConfig.upsert({
+          where: { lessonKey: c.lessonKey },
+          create: { lessonKey: c.lessonKey, availableDay: Math.max(1, Number(c.availableDay) || 1) },
+          update: { availableDay: Math.max(1, Number(c.availableDay) || 1) },
+        })
+      )
+    )
+
+    res.json({ saved: results.length })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to save lesson day configs' })
   }
 })
 
