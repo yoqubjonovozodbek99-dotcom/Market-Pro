@@ -1,6 +1,16 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
 import { getAccessToken, loginUser, logoutUser, registerUser, fetchMe, type ApiUser, clearTokens } from '../api'
 
+export class ApiError extends Error {
+  code?: string
+
+  constructor(message: string, code?: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.code = code
+  }
+}
+
 interface AuthContextType {
   user: ApiUser | null
   isLoading: boolean
@@ -35,8 +45,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadUser])
 
   const login = async (email: string, password: string) => {
-    const result = await loginUser({ email, password })
-    setUser(result.user)
+    try {
+      const result = await loginUser({ email, password })
+      setUser(result.user)
+    } catch (err) {
+      if (err instanceof Error) {
+        const error = new ApiError(err.message, (err as any).code)
+        throw error
+      }
+      throw err
+    }
   }
 
   const register = async (data: { name: string; email: string; phone?: string; password: string; language?: 'uz' | 'ru' }) => {
