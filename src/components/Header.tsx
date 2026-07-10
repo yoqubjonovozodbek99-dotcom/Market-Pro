@@ -2,6 +2,7 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { MarketProLogo, UzumLogo, YandexLogo } from './Logo'
 import { ThemeToggle, LanguageToggle } from './ThemeLanguageToggle'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
 
 function isLessonsPath(path: string) {
   return path.startsWith('/darslar') || path.startsWith('/video-darslar')
@@ -10,11 +11,13 @@ function isLessonsPath(path: string) {
 export function Header() {
   const { t } = useLanguage()
   const location = useLocation()
+  const { user } = useAuth()
 
   const links = [
     { to: '/', label: t.nav.home, end: true as const },
     { to: '/darslar', label: t.nav.lessons, end: false as const },
     { to: '/profil', label: t.nav.profile, end: false as const },
+    ...(user?.role === 'ADMIN' ? [{ to: '/admin', label: t.nav.admin, end: false as const }] : []),
   ]
 
   const navClass = (to: string) =>

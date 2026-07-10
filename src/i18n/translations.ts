@@ -6,6 +6,7 @@ export type TranslationKeys = {
     lessons: string
     videos: string
     profile: string
+    admin: string
   }
   hero: {
     badge: string
@@ -173,6 +174,7 @@ export const translations: Record<Language, TranslationKeys> = {
       lessons: 'Darslar',
       videos: 'Video darslar',
       profile: 'Profil',
+      admin: 'Admin panel',
     },
     hero: {
       badge: 'Online o\'quv platformasi',
@@ -412,6 +414,7 @@ export const translations: Record<Language, TranslationKeys> = {
       lessons: 'Уроки',
       videos: 'Видеоуроки',
       profile: 'Профиль',
+      admin: 'Админ-панель',
     },
     hero: {
       badge: 'Онлайн обучающая платформа',

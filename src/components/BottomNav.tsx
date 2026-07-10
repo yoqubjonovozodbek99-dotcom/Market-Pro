@@ -1,6 +1,7 @@
 import { NavLink, useLocation } from 'react-router-dom'
-import { Home, BookOpen, User } from 'lucide-react'
+import { Home, BookOpen, User, ShieldCheck } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
 
 function isLessonsPath(path: string) {
   return path.startsWith('/darslar') || path.startsWith('/video-darslar')
@@ -9,16 +10,18 @@ function isLessonsPath(path: string) {
 export function BottomNav() {
   const { t } = useLanguage()
   const location = useLocation()
+  const { user } = useAuth()
 
   const links = [
     { to: '/', label: t.nav.home, icon: Home, end: true },
     { to: '/darslar', label: t.nav.lessons, icon: BookOpen, end: false },
     { to: '/profil', label: t.nav.profile, icon: User, end: false },
+    ...(user?.role === 'ADMIN' ? [{ to: '/admin', label: t.nav.admin, icon: ShieldCheck, end: false }] : []),
   ]
 
   return (
     <nav className="md:hidden fixed bottom-0 inset-x-0 z-50 bg-white/95 dark:bg-gray-950/95 backdrop-blur-lg border-t border-gray-200 dark:border-gray-800 safe-bottom">
-      <div className="grid grid-cols-3">
+      <div className={`grid ${links.length === 4 ? 'grid-cols-4' : 'grid-cols-3'}`}>
         {links.map(({ to, label, icon: Icon, end }) => {
           const isActive = to === '/darslar' ? isLessonsPath(location.pathname) : (
             end ? location.pathname === '/' : location.pathname.startsWith(to)
