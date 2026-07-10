@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { prisma } from './prisma'
 import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils'
-import { requireAuth, requireSiteAuth, type SiteAuthRequest } from './middleware'
+import { requireAuth, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware'
 import { sendWelcomeEmail, sendPasswordResetEmail } from './email'
 import {
   createSiteSession,
@@ -59,7 +59,7 @@ router.post('/auth/site-logout', requireSiteAuth, async (req: SiteAuthRequest, r
   }
 })
 
-router.get('/auth/site-session', requireSiteAuth, async (req, res) => {
+router.get('/auth/site-session', requireSiteAuth, async (req: SiteAuthRequest, res) => {
   res.json({ valid: true, sessionId: req.sessionId })
 })
 
@@ -172,7 +172,7 @@ router.post('/auth/login', async (req, res) => {
   }
 })
 
-router.post('/auth/logout', requireAuth, async (req, res) => {
+router.post('/auth/logout', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const { deviceId } = req.body
@@ -266,7 +266,7 @@ router.post('/auth/reset-password', async (req, res) => {
   }
 })
 
-router.get('/me', requireAuth, async (req, res) => {
+router.get('/me', requireAuth, async (req: AuthRequest, res) => {
   try {
     const user = req.user
     if (!user) return res.status(404).json({ error: 'User not found' })
@@ -284,7 +284,7 @@ router.get('/me', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/check-subscription', requireAuth, async (req, res) => {
+router.get('/check-subscription', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const subscription = await prisma.subscription.findUnique({ where: { userId } })
@@ -319,7 +319,7 @@ router.get('/courses', async (_req, res) => {
   }
 })
 
-router.post('/lessons/:lessonId/progress', requireAuth, async (req, res) => {
+router.post('/lessons/:lessonId/progress', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { lessonId } = req.params
     const { isCompleted, watchedSec } = req.body
@@ -348,7 +348,7 @@ router.post('/lessons/:lessonId/progress', requireAuth, async (req, res) => {
   }
 })
 
-router.post('/payments', requireAuth, async (req, res) => {
+router.post('/payments', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { amount, plan, screenshot, note } = req.body
     const userId = req.userId!
@@ -370,7 +370,7 @@ router.post('/payments', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/payments', requireAuth, async (req, res) => {
+router.get('/payments', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const payments = await prisma.payment.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } })
@@ -381,7 +381,7 @@ router.get('/payments', requireAuth, async (req, res) => {
   }
 })
 
-router.post('/subscriptions', requireAuth, async (req, res) => {
+router.post('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const { plan, startDate, endDate } = req.body
     const userId = req.userId!
@@ -409,7 +409,7 @@ router.post('/subscriptions', requireAuth, async (req, res) => {
   }
 })
 
-router.get('/subscriptions', requireAuth, async (req, res) => {
+router.post('/subscriptions', requireAuth, async (req: AuthRequest, res) => {
   try {
     const userId = req.userId!
     const subscription = await prisma.subscription.findUnique({ where: { userId } })
