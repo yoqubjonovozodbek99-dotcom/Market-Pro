@@ -162,14 +162,15 @@ export function AdminPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-10 md:py-16">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 md:py-16 pb-24 md:pb-16">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin panel</h1>
 
       {/* Tab navigatsiya */}
-      <div className="flex gap-2 mb-8 border-b border-gray-200 dark:border-gray-700">
+      <div className="mb-6 border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+        <div className="flex gap-1 min-w-max">
         <button
           onClick={() => setActiveTab('users')}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'users'
               ? 'border-uzum text-uzum dark:text-blue-400 dark:border-blue-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -185,7 +186,7 @@ export function AdminPage() {
         </button>
         <button
           onClick={() => setActiveTab('lessonDays')}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'lessonDays'
               ? 'border-uzum text-uzum dark:text-blue-400 dark:border-blue-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -196,7 +197,7 @@ export function AdminPage() {
         </button>
         <button
           onClick={() => setActiveTab('payments')}
-          className={`flex items-center gap-2 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+          className={`flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
             activeTab === 'payments'
               ? 'border-uzum text-uzum dark:text-blue-400 dark:border-blue-400'
               : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
@@ -210,12 +211,13 @@ export function AdminPage() {
             </span>
           )}
         </button>
+        </div>
       </div>
 
       {/* ====== FOYDALANUVCHILAR TAB ====== */}
       {activeTab === 'users' && (
         <>
-          <p className="text-sm text-gray-800 dark:text-gray-200 mb-8">
+          <p className="text-sm text-gray-800 dark:text-gray-200 mb-6">
             Yangi ro'yxatdan o'tgan o'quvchilar shu yerda ko'rinadi. Tasdiqlaganingizdan so'ng ular tizimga kira oladi.
           </p>
 
@@ -244,18 +246,18 @@ export function AdminPage() {
                       Ro'yxatdan o'tgan: {new Date(u.createdAt).toLocaleString()}
                     </div>
                   </div>
-                  <div className="flex gap-2 shrink-0">
+                  <div className="flex flex-col sm:flex-row gap-2 shrink-0 w-full sm:w-auto">
                     <button
                       disabled={busyId === u.id}
                       onClick={() => handleApprove(u.id)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-500/20 text-sm font-medium"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-500/20 text-sm font-medium"
                     >
                       <CheckCircle2 className="w-4 h-4" /> Tasdiqlash
                     </button>
                     <button
                       disabled={busyId === u.id}
                       onClick={() => handleReject(u.id)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-sm font-medium"
+                      className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-sm font-medium"
                     >
                       <XCircle className="w-4 h-4" /> Rad etish
                     </button>
@@ -292,15 +294,15 @@ export function AdminPage() {
                     {mod.lessons.map((lesson, idx) => (
                       <div
                         key={lesson.id}
-                        className="flex items-center gap-4 px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                        className="flex flex-col sm:flex-row sm:items-center gap-3 px-3 sm:px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
                       >
                         <span className="w-6 text-center text-xs font-bold text-gray-400 shrink-0">
                           {idx + 1}
                         </span>
-                        <span className="flex-1 text-sm text-gray-900 dark:text-gray-100 min-w-0 truncate">
+                        <span className="flex-1 text-sm text-gray-900 dark:text-gray-100 min-w-0 break-words">
                           {lesson.title}
                         </span>
-                        <div className="flex items-center gap-2 shrink-0">
+                        <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0 w-full sm:w-auto">
                           <label className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
                             Kun raqami:
                           </label>
@@ -321,11 +323,11 @@ export function AdminPage() {
             </div>
           )}
 
-          <div className="mt-8 flex items-center gap-4">
+          <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
             <button
               onClick={handleSaveDays}
               disabled={daysSaving || daysLoading}
-              className="flex items-center gap-2 px-6 py-2.5 rounded-xl bg-uzum text-white hover:bg-uzum/90 disabled:opacity-50 font-medium text-sm transition-colors"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-uzum text-white hover:bg-uzum/90 disabled:opacity-50 font-medium text-sm transition-colors"
             >
               <Save className="w-4 h-4" />
               {daysSaving ? 'Saqlanmoqda...' : 'Saqlash'}
@@ -383,7 +385,7 @@ export function AdminPage() {
                       </div>
                       <div className="text-sm text-gray-500 dark:text-gray-400">{p.user.email}</div>
                       {p.user.phone && <div className="text-sm text-gray-500 dark:text-gray-400">{p.user.phone}</div>}
-                      <div className="flex gap-4 mt-2 text-sm">
+                      <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-sm">
                         <span className="font-medium text-gray-900 dark:text-white">
                           {p.amount.toLocaleString()} so'm
                         </span>
@@ -405,7 +407,7 @@ export function AdminPage() {
                     </div>
 
                     {p.status === 'PENDING' && (
-                      <div className="flex flex-col gap-2 shrink-0 min-w-[180px]">
+                      <div className="flex flex-col gap-2 shrink-0 w-full sm:w-auto sm:min-w-[180px]">
                         <div>
                           <label className="text-xs text-gray-400 block mb-1">Obuna boshlanish sanasi:</label>
                           <input
@@ -426,7 +428,7 @@ export function AdminPage() {
                           <button
                             disabled={paymentBusy === p.id}
                             onClick={() => handleRejectPayment(p.id)}
-                            className="flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-sm font-medium disabled:opacity-50"
+                            className="min-w-[44px] flex items-center justify-center gap-1 px-3 py-2 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-sm font-medium disabled:opacity-50"
                           >
                             <XCircle className="w-4 h-4" />
                           </button>

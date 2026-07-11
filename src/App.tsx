@@ -13,6 +13,7 @@ import { WrittenLessonPage } from './pages/WrittenLessonPage'
 import { VideoLessonsPage } from './pages/VideoLessonsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { LoginPage } from './pages/LoginPage'
+import { AdminPage } from './pages/AdminPage'
 
 export default function App() {
   return (
@@ -32,6 +33,7 @@ export default function App() {
                 <Route path="/darslar/yozma/:moduleSlug/:lessonId" element={<ProtectedRoute><WrittenLessonPage /></ProtectedRoute>} />
                 <Route path="/video-darslar" element={<ProtectedRoute><VideoLessonsPage /></ProtectedRoute>} />
                 <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
               </Route>
             </Routes>
           </BrowserRouter>
