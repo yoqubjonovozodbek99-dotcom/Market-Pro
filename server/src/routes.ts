@@ -435,6 +435,20 @@ router.get('/admin/users/pending', requireAuth, requireAdmin, async (_req, res) 
   }
 })
 
+router.get('/admin/users', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { role: 'STUDENT' },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    res.json({ users: users.map(sanitizeUser) })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load users' })
+  }
+})
+
 router.post('/admin/users/:userId/approve', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { userId } = req.params

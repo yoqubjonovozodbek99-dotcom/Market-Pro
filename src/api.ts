@@ -240,6 +240,10 @@ export async function fetchPendingUsers() {
   return request<{ users: ApiUser[] }>('/api/admin/users/pending')
 }
 
+export async function fetchAdminUsers() {
+  return request<{ users: ApiUser[] }>('/api/admin/users')
+}
+
 export async function approveUser(userId: string) {
   return request('/api/admin/users/' + userId + '/approve', { method: 'POST' })
 }

@@ -3,6 +3,7 @@ import { CheckCircle2, XCircle, ShieldAlert, CalendarDays, Save, BookOpen, Credi
 import { useAuth } from '../contexts/AuthContext'
 import {
   fetchPendingUsers,
+  fetchAdminUsers,
   approveUser,
   rejectUser,
   fetchLessonDayConfigs,
@@ -23,14 +24,18 @@ export function AdminPage() {
 
   // --- Foydalanuvchilar tab ---
   const [pending, setPending] = useState<ApiUser[]>([])
+  const [allStudents, setAllStudents] = useState<ApiUser[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
 
   const load = () => {
     setLoading(true)
-    fetchPendingUsers()
-      .then((res) => setPending(res.users))
+    Promise.all([fetchPendingUsers(), fetchAdminUsers()])
+      .then(([pendingRes, allRes]) => {
+        setPending(pendingRes.users)
+        setAllStudents(allRes.users)
+      })
       .catch((err) => setError(err instanceof Error ? err.message : 'Xatolik yuz berdi'))
       .finally(() => setLoading(false))
   }
@@ -141,6 +146,7 @@ export function AdminPage() {
     try {
       await approveUser(id)
       setPending((prev) => prev.filter((u) => u.id !== id))
+      setAllStudents((prev) => prev.map((u) => (u.id === id ? { ...u, isVerified: true } : u)))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xatolik yuz berdi')
     } finally {
@@ -154,6 +160,7 @@ export function AdminPage() {
     try {
       await rejectUser(id)
       setPending((prev) => prev.filter((u) => u.id !== id))
+      setAllStudents((prev) => prev.filter((u) => u.id !== id))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Xatolik yuz berdi')
     } finally {
@@ -266,6 +273,47 @@ export function AdminPage() {
               ))}
             </div>
           )}
+
+          <div className="mt-10">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-3">
+              Barcha ro'yxatdan o'tgan o'quvchilar ({allStudents.length})
+            </h2>
+
+            {loading ? (
+              <p className="text-gray-800 dark:text-gray-200">Yuklanmoqda...</p>
+            ) : allStudents.length === 0 ? (
+              <p className="text-gray-800 dark:text-gray-200">Hozircha ro'yxatdan o'tgan o'quvchilar yo'q.</p>
+            ) : (
+              <div className="space-y-3">
+                {allStudents.map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                  >
+                    <div>
+                      <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">{u.email}</div>
+                      {u.phone && <div className="text-sm text-gray-500 dark:text-gray-400">{u.phone}</div>}
+                      <div className="text-xs text-gray-400 mt-1">
+                        A'zo bo'lgan sana: {new Date(u.createdAt).toLocaleString()}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className={`px-2 py-1 rounded-full ${u.isVerified ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'}`}>
+                        {u.isVerified ? 'Tasdiqlangan' : 'Kutilmoqda'}
+                      </span>
+                      {u.isBlocked && (
+                        <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400">
+                          Bloklangan
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </>
       )}
 
