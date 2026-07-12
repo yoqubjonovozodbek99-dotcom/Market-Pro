@@ -45,10 +45,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadUser])
 
   const login = async (email: string, password: string) => {
+    // Account switch holatida oldingi token/user osilib qolmasligi uchun
+    clearTokens()
+    setUser(null)
+
     try {
       const result = await loginUser({ email, password })
+
+      // Avval login javobidan user qo'yamiz, keyin /me bilan yakuniy sinxron qilamiz
       setUser(result.user)
+      try {
+        const me = await fetchMe()
+        setUser(me.user)
+      } catch {
+        // Agar /me vaqtincha xato bersa ham login javobidagi user bilan davom etamiz
+      }
     } catch (err) {
+      clearTokens()
+      setUser(null)
       if (err instanceof Error) {
         const error = new ApiError(err.message, (err as any).code)
         throw error
