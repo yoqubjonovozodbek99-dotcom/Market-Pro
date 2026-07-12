@@ -127,7 +127,7 @@ export function AdminPage() {
     }
   }
 
-  if (!user) {
+  if (!user || user.role !== 'ADMIN') {
     return (
       <div className="max-w-xl mx-auto px-4 py-20 text-center">
         <ShieldAlert className="w-10 h-10 mx-auto mb-4 text-red-500" />

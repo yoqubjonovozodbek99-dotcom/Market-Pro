@@ -3,7 +3,7 @@ import { ThemeProvider } from './contexts/ThemeContext'
 import { LanguageProvider } from './contexts/LanguageContext'
 import { AuthProvider } from './contexts/AuthContext'
 import { Layout } from './components/Layout'
-import { ProtectedRoute } from './components/ProtectedRoute'
+import { AdminRoute, ProtectedRoute } from './components/ProtectedRoute'
 import { SessionWatcher } from './components/SessionWatcher'
 import { HomePage } from './pages/HomePage'
 import { LessonsHubPage } from './pages/LessonsHubPage'
@@ -33,7 +33,7 @@ export default function App() {
                 <Route path="/darslar/yozma/:moduleSlug/:lessonId" element={<ProtectedRoute><WrittenLessonPage /></ProtectedRoute>} />
                 <Route path="/video-darslar" element={<ProtectedRoute><VideoLessonsPage /></ProtectedRoute>} />
                 <Route path="/profil" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
-                <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>} />
+                <Route path="/admin" element={<AdminRoute><AdminPage /></AdminRoute>} />
               </Route>
             </Routes>
           </BrowserRouter>

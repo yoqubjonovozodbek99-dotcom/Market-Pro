@@ -16,7 +16,7 @@ export function BottomNav() {
     { to: '/', label: t.nav.home, icon: Home, end: true },
     { to: '/darslar', label: t.nav.lessons, icon: BookOpen, end: false },
     { to: '/profil', label: t.nav.profile, icon: User, end: false },
-    ...(user ? [{ to: '/admin', label: t.nav.admin, icon: ShieldCheck, end: false }] : []),
+    ...(user?.role === 'ADMIN' ? [{ to: '/admin', label: t.nav.admin, icon: ShieldCheck, end: false }] : []),
   ]
 
   return (
