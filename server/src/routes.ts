@@ -475,6 +475,17 @@ router.post('/admin/users/:userId/reject', requireAuth, requireAdmin, async (req
   }
 })
 
+router.delete('/admin/users/:userId', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params
+    await prisma.user.delete({ where: { id: userId } })
+    res.json({ message: 'User removed' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to remove user' })
+  }
+})
+
 router.get('/admin/payments', requireAuth, requireAdmin, async (_req, res) => {
   try {
     const payments = await prisma.payment.findMany({

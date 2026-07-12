@@ -6,6 +6,7 @@ import {
   fetchAdminUsers,
   approveUser,
   rejectUser,
+  deleteAdminUser,
   fetchLessonDayConfigs,
   saveLessonDayConfigs,
   fetchAdminPayments,
@@ -168,6 +169,20 @@ export function AdminPage() {
     }
   }
 
+  const handleDeleteStudent = async (id: string) => {
+    if (!confirm("Bu o'quvchini butunlay o'chirmoqchimisiz?")) return
+    setBusyId(id)
+    try {
+      await deleteAdminUser(id)
+      setPending((prev) => prev.filter((u) => u.id !== id))
+      setAllStudents((prev) => prev.filter((u) => u.id !== id))
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'O\'chirishda xatolik yuz berdi')
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 md:py-16 pb-24 md:pb-16">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin panel</h1>
@@ -299,15 +314,24 @@ export function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className={`px-2 py-1 rounded-full ${u.isVerified ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'}`}>
-                        {u.isVerified ? 'Tasdiqlangan' : 'Kutilmoqda'}
-                      </span>
-                      {u.isBlocked && (
-                        <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400">
-                          Bloklangan
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-1 rounded-full ${u.isVerified ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'}`}>
+                          {u.isVerified ? 'Tasdiqlangan' : 'Kutilmoqda'}
                         </span>
-                      )}
+                        {u.isBlocked && (
+                          <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400">
+                            Bloklangan
+                          </span>
+                        )}
+                      </div>
+                      <button
+                        disabled={busyId === u.id}
+                        onClick={() => handleDeleteStudent(u.id)}
+                        className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 text-xs font-medium disabled:opacity-50"
+                      >
+                        O'chirish
+                      </button>
                     </div>
                   </div>
                 ))}

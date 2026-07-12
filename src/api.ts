@@ -252,6 +252,10 @@ export async function rejectUser(userId: string) {
   return request('/api/admin/users/' + userId + '/reject', { method: 'POST' })
 }
 
+export async function deleteAdminUser(userId: string) {
+  return request('/api/admin/users/' + userId, { method: 'DELETE' })
+}
+
 // ===== LESSON DAY CONFIGS =====
 export async function fetchLessonDayConfigs() {
   return request<{ configs: Record<string, number> }>('/api/lesson-day-configs')
