@@ -60,6 +60,8 @@ export function LoginPage() {
         setPendingMessage(t.pendingLoginAttempt)
       } else if (err instanceof ApiError && err.code === 'BLOCKED') {
         setError(t.blocked)
+      } else if (err instanceof Error) {
+        setError(err.message)
       } else {
         setError(t.invalid)
       }

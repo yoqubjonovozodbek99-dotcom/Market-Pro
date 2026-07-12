@@ -1,16 +1,16 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
-import { prisma } from './prisma'
-import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils'
-import { requireAuth, requireAdmin, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware'
-import { sendWelcomeEmail, sendPasswordResetEmail } from './email'
+import { prisma } from './prisma.js'
+import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils.js'
+import { requireAuth, requireAdmin, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware.js'
+import { sendWelcomeEmail, sendPasswordResetEmail } from './email.js'
 import {
   createSiteSession,
   isSessionActive,
   revokeSession,
   validateSiteCredentials,
-} from './siteAuth'
+} from './siteAuth.js'
 
 const router = Router()
 
