@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs'
 import crypto from 'crypto'
 import { prisma } from './prisma'
 import { getAuthHeaderValue, signToken, verifyToken, sanitizeUser } from './utils'
-import { requireAuth, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware'
+import { requireAuth, requireAdmin, requireSiteAuth, type SiteAuthRequest, type AuthRequest } from './middleware'
 import { sendWelcomeEmail, sendPasswordResetEmail } from './email'
 import {
   createSiteSession,
@@ -13,6 +13,12 @@ import {
 } from './siteAuth'
 
 const router = Router()
+
+function addDays(date: Date, days: number) {
+  const nextDate = new Date(date)
+  nextDate.setDate(nextDate.getDate() + days)
+  return nextDate
+}
 
 router.post('/auth/site-login', async (req, res) => {
   try {
@@ -116,10 +122,11 @@ router.post('/auth/register', async (req, res) => {
 
     await sendWelcomeEmail(email, name)
 
-    const token = signToken({ userId: user.id }, process.env.JWT_SECRET!, process.env.JWT_EXPIRE || '15m')
-    const refreshToken = signToken({ userId: user.id }, process.env.JWT_REFRESH_SECRET!, process.env.JWT_REFRESH_EXPIRE || '30d')
-
-    res.status(201).json({ user: sanitizeUser(user), token, refreshToken })
+    res.status(201).json({
+      user: sanitizeUser(user),
+      message: 'Hisobingiz yaratildi. Administrator tasdiqlashini kuting.',
+      pendingApproval: true,
+    })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Registration failed' })
@@ -143,7 +150,14 @@ router.post('/auth/login', async (req, res) => {
     }
 
     if (user.isBlocked) {
-      return res.status(403).json({ error: 'User account is blocked' })
+      return res.status(403).json({ error: 'User account is blocked', code: 'BLOCKED' })
+    }
+
+    if (!user.isVerified) {
+      return res.status(403).json({
+        error: 'User account is pending admin approval',
+        code: 'PENDING_APPROVAL',
+      })
     }
 
     await prisma.userSession.upsert({
@@ -281,6 +295,271 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Unable to fetch user' })
+  }
+})
+
+router.get('/me/progress', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!
+
+    const [
+      lessons,
+      completedProgress,
+      completedLessons,
+      watchedAggregate,
+      recentCompleted,
+    ] = await Promise.all([
+      prisma.lesson.findMany({
+        select: {
+          id: true,
+          module: {
+            select: {
+              course: {
+                select: { platform: true },
+              },
+            },
+          },
+        },
+      }),
+      prisma.lessonProgress.findMany({
+        where: { userId, isCompleted: true },
+        select: {
+          lessonId: true,
+          lesson: {
+            select: {
+              module: {
+                select: {
+                  course: {
+                    select: { platform: true },
+                  },
+                },
+              },
+            },
+          },
+        },
+      }),
+      prisma.lessonProgress.count({ where: { userId, isCompleted: true } }),
+      prisma.lessonProgress.aggregate({
+        where: { userId },
+        _sum: { watchedSec: true },
+      }),
+      prisma.lessonProgress.findMany({
+        where: { userId, isCompleted: true, completedAt: { not: null } },
+        orderBy: { completedAt: 'desc' },
+        take: 10,
+        select: {
+          completedAt: true,
+          lesson: {
+            select: {
+              titleUz: true,
+              titleRu: true,
+            },
+          },
+        },
+      }),
+    ])
+
+    const totalLessons = lessons.length
+    const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+
+    const totalByPlatform = {
+      uzum: lessons.filter((lesson) => {
+        const platform = lesson.module.course.platform
+        return platform === 'UZUM' || platform === 'BOTH'
+      }).length,
+      yandex: lessons.filter((lesson) => {
+        const platform = lesson.module.course.platform
+        return platform === 'YANDEX' || platform === 'BOTH'
+      }).length,
+    }
+
+    const completedByPlatform = {
+      uzum: completedProgress.filter((progress) => {
+        const platform = progress.lesson.module.course.platform
+        return platform === 'UZUM' || platform === 'BOTH'
+      }).length,
+      yandex: completedProgress.filter((progress) => {
+        const platform = progress.lesson.module.course.platform
+        return platform === 'YANDEX' || platform === 'BOTH'
+      }).length,
+    }
+
+    res.json({
+      totalLessons,
+      completedLessons,
+      progressPercent,
+      watchedSeconds: watchedAggregate._sum.watchedSec ?? 0,
+      uzum: {
+        total: totalByPlatform.uzum,
+        completed: completedByPlatform.uzum,
+      },
+      yandex: {
+        total: totalByPlatform.yandex,
+        completed: completedByPlatform.yandex,
+      },
+      recentActivity: recentCompleted.map((item) => ({
+        lessonTitleUz: item.lesson.titleUz,
+        lessonTitleRu: item.lesson.titleRu,
+        completedAt: item.completedAt?.toISOString() ?? new Date().toISOString(),
+      })),
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load progress' })
+  }
+})
+
+router.get('/lesson-day-configs', async (_req, res) => {
+  try {
+    const configs = await prisma.lessonDayConfig.findMany()
+    res.json({
+      configs: Object.fromEntries(configs.map((config) => [config.lessonKey, config.availableDay])),
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load lesson day configs' })
+  }
+})
+
+router.get('/admin/users/pending', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      where: { isVerified: false },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    res.json({ users: users.map(sanitizeUser) })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load pending users' })
+  }
+})
+
+router.post('/admin/users/:userId/approve', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: { isVerified: true },
+    })
+
+    res.json({ user: sanitizeUser(user) })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to approve user' })
+  }
+})
+
+router.post('/admin/users/:userId/reject', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params
+    await prisma.user.delete({ where: { id: userId } })
+    res.json({ message: 'User rejected and removed' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to reject user' })
+  }
+})
+
+router.get('/admin/payments', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const payments = await prisma.payment.findMany({
+      include: { user: true },
+      orderBy: { createdAt: 'desc' },
+    })
+
+    res.json({ payments })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to load payments' })
+  }
+})
+
+router.post('/admin/payments/:id/confirm', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { id } = req.params
+    const { startDate } = req.body as { startDate?: string }
+
+    const payment = await prisma.payment.findUnique({ where: { id } })
+    if (!payment) {
+      return res.status(404).json({ error: 'Payment not found' })
+    }
+
+    const start = startDate ? new Date(startDate) : new Date()
+    const end = addDays(start, payment.plan === 'THREE_MONTHS' ? 90 : 30)
+
+    await prisma.$transaction([
+      prisma.payment.update({
+        where: { id },
+        data: {
+          status: 'CONFIRMED',
+          confirmedBy: req.userId,
+          confirmedAt: new Date(),
+        },
+      }),
+      prisma.subscription.upsert({
+        where: { userId: payment.userId },
+        create: {
+          userId: payment.userId,
+          plan: payment.plan,
+          startDate: start,
+          endDate: end,
+          isActive: true,
+        },
+        update: {
+          plan: payment.plan,
+          startDate: start,
+          endDate: end,
+          isActive: true,
+        },
+      }),
+    ])
+
+    res.json({ startDate: start.toISOString(), endDate: end.toISOString() })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to confirm payment' })
+  }
+})
+
+router.post('/admin/payments/:id/reject', requireAuth, requireAdmin, async (_req, res) => {
+  try {
+    const { id } = _req.params
+    await prisma.payment.update({
+      where: { id },
+      data: { status: 'REJECTED' },
+    })
+
+    res.json({ message: 'Payment rejected' })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to reject payment' })
+  }
+})
+
+router.post('/admin/lesson-day-configs/bulk', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const configs = Array.isArray(req.body?.configs) ? req.body.configs : []
+
+    await Promise.all(
+      configs.map((config: { lessonKey: string; availableDay: number }) =>
+        prisma.lessonDayConfig.upsert({
+          where: { lessonKey: config.lessonKey },
+          create: {
+            lessonKey: config.lessonKey,
+            availableDay: Number(config.availableDay) || 1,
+          },
+          update: {
+            availableDay: Number(config.availableDay) || 1,
+          },
+        })
+      )
+    )
+
+    res.json({ saved: configs.length })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to save lesson day configs' })
   }
 })
 

@@ -18,9 +18,12 @@ import { demoProfile } from '../data/content'
 
 export function ProfilePage() {
   const { t, lang } = useLanguage()
-  const { logout } = useAuth()
+  const { logout, user } = useAuth()
   const navigate = useNavigate()
   const student = demoProfile
+  const memberSince = user?.createdAt
+    ? new Date(user.createdAt).toLocaleDateString(lang === 'uz' ? 'uz-UZ' : 'ru-RU')
+    : student.memberSince
 
   const handleLogout = async () => {
     await logout()
@@ -59,7 +62,7 @@ export function ProfilePage() {
               {[
                 { icon: Mail, value: student.email },
                 { icon: Phone, value: student.phone },
-                { icon: Calendar, value: `${t.profile.memberSince}: ${student.memberSince}` },
+                { icon: Calendar, value: `${t.profile.memberSince}: ${memberSince}` },
                 {
                   icon: CreditCard,
                   value: lang === 'uz' ? student.subscriptionPlan : student.subscriptionPlanRu,
