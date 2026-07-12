@@ -88,6 +88,13 @@ export function ProfilePage() {
       : (lang === 'uz' ? '1 oylik obuna' : 'Подписка на 1 месяц')
     : (lang === 'uz' ? 'Obuna mavjud emas' : 'Нет активной подписки')
 
+  const subscriptionDaysLeft = subscription?.endDate
+    ? Math.max(
+        Math.ceil((new Date(subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)),
+        0,
+      )
+    : 0
+
   const handleLogout = async () => {
     await logout()
     navigate('/kirish')
@@ -178,6 +185,20 @@ export function ProfilePage() {
                   <span className="font-medium">
                     {new Date(subscription.endDate).toLocaleDateString(lang === 'uz' ? 'uz-UZ' : 'ru-RU')}
                   </span>
+                </div>
+              )}
+              {subscription?.startDate && (
+                <div>
+                  {lang === 'uz' ? 'Boshlangan sanasi:' : 'Дата начала:'}{' '}
+                  <span className="font-medium">
+                    {new Date(subscription.startDate).toLocaleDateString(lang === 'uz' ? 'uz-UZ' : 'ru-RU')}
+                  </span>
+                </div>
+              )}
+              {subscription?.isActive && (
+                <div>
+                  {lang === 'uz' ? 'Qolgan kunlar:' : 'Осталось дней:'}{' '}
+                  <span className="font-medium">{subscriptionDaysLeft}</span>
                 </div>
               )}
             </div>
