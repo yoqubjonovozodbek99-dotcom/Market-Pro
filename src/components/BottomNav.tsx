@@ -15,7 +15,7 @@ export function BottomNav() {
   const links = [
     { to: '/', label: t.nav.home, icon: Home, end: true },
     { to: '/darslar', label: t.nav.lessons, icon: BookOpen, end: false },
-    { to: '/profil', label: t.nav.profile, icon: User, end: false },
+    ...(user ? [{ to: '/profil', label: t.nav.profile, icon: User, end: false }] : []),
     ...(user?.role === 'ADMIN' ? [{ to: '/admin', label: t.nav.admin, icon: ShieldCheck, end: false }] : []),
   ]
 
