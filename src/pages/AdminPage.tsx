@@ -22,6 +22,11 @@ import { writtenModules } from '../data/writtenLessons'
 type Tab = 'users' | 'payments' | 'lessonDays'
 
 export function AdminPage() {
+  const MONTHLY_PRICE = 510000
+  const LESSONS_PER_MONTH = 12
+  const STUDY_DAYS_PER_WEEK = 3
+  const CALENDAR_DAYS_PER_WEEK = 7
+
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('users')
 
@@ -32,8 +37,16 @@ export function AdminPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [accessDaysMap, setAccessDaysMap] = useState<Record<string, number>>({})
+  const [paymentAmountMap, setPaymentAmountMap] = useState<Record<string, number>>({})
   const [accessDaysSavingId, setAccessDaysSavingId] = useState<string | null>(null)
   const [accessDaysMsg, setAccessDaysMsg] = useState('')
+
+  const calcSuggestedAccessDaysByAmount = (amount: number) => {
+    const lessonPrice = MONTHLY_PRICE / LESSONS_PER_MONTH
+    const lessonCount = amount / lessonPrice
+    const calendarDays = lessonCount * (CALENDAR_DAYS_PER_WEEK / STUDY_DAYS_PER_WEEK)
+    return Math.max(0, Math.min(365, Math.floor(calendarDays)))
+  }
 
   const load = () => {
     setLoading(true)
@@ -265,6 +278,9 @@ export function AdminPage() {
           <p className="text-sm text-gray-800 dark:text-gray-200 mb-6">
             Yangi ro'yxatdan o'tgan o'quvchilar shu yerda ko'rinadi. Tasdiqlaganingizdan so'ng ular tizimga kira oladi.
           </p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+            Har bir o'quvchi uchun dars ochilish kunini qo'lda kiriting va saqlang. Xohlasangiz to'lov summasi bo'yicha avtomatik hisoblab ham qo'yishingiz mumkin.
+          </p>
 
           {error && (
             <div className="mb-6 p-3 rounded-lg text-sm bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400">
@@ -351,9 +367,30 @@ export function AdminPage() {
                         <input
                           type="number"
                           min={0}
+                          step={1000}
+                          value={paymentAmountMap[u.id] ?? ''}
+                          onChange={(e) => setPaymentAmountMap((prev) => ({ ...prev, [u.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                          placeholder="To'lov so'm"
+                          className="w-28 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        />
+                        <button
+                          onClick={() => {
+                            const amount = paymentAmountMap[u.id] ?? 0
+                            setAccessDaysMap((prev) => ({ ...prev, [u.id]: calcSuggestedAccessDaysByAmount(amount) }))
+                          }}
+                          className="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-medium"
+                        >
+                          Hisoblash
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
                           max={365}
                           value={accessDaysMap[u.id] ?? u.accessDays}
                           onChange={(e) => setAccessDaysMap((prev) => ({ ...prev, [u.id]: Math.max(0, Math.min(365, parseInt(e.target.value) || 0)) }))}
+                          placeholder="Kun"
                           className="w-20 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
                         />
                         <button
