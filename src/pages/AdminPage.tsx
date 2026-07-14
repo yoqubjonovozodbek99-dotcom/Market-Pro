@@ -12,6 +12,7 @@ import {
   fetchAdminPayments,
   confirmPayment,
   rejectPayment,
+  saveAdminUserAccessDays,
   type ApiUser,
   type AdminStudent,
   type AdminPayment,
@@ -30,6 +31,9 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [accessDaysMap, setAccessDaysMap] = useState<Record<string, number>>({})
+  const [accessDaysSavingId, setAccessDaysSavingId] = useState<string | null>(null)
+  const [accessDaysMsg, setAccessDaysMsg] = useState('')
 
   const load = () => {
     setLoading(true)
@@ -37,6 +41,7 @@ export function AdminPage() {
       .then(([pendingRes, allRes]) => {
         setPending(pendingRes.users)
         setAllStudents(allRes.users)
+        setAccessDaysMap(Object.fromEntries(allRes.users.map((u) => [u.id, u.accessDays])))
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Xatolik yuz berdi'))
       .finally(() => setLoading(false))
@@ -185,6 +190,22 @@ export function AdminPage() {
     }
   }
 
+  const handleSaveAccessDays = async (id: string) => {
+    setAccessDaysSavingId(id)
+    setAccessDaysMsg('')
+    try {
+      const accessDays = Math.max(0, Math.min(365, accessDaysMap[id] ?? 0))
+      const res = await saveAdminUserAccessDays(id, accessDays)
+      setAllStudents((prev) => prev.map((u) => (u.id === id ? res.user : u)))
+      setAccessDaysMap((prev) => ({ ...prev, [id]: res.user.accessDays }))
+      setAccessDaysMsg(`${res.user.name} uchun ${res.user.accessDays} kun saqlandi`)
+    } catch (err) {
+      setAccessDaysMsg(err instanceof Error ? err.message : 'Saqlashda xatolik')
+    } finally {
+      setAccessDaysSavingId(null)
+    }
+  }
+
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 md:py-16 pb-24 md:pb-16">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin panel</h1>
@@ -296,6 +317,12 @@ export function AdminPage() {
               Barcha ro'yxatdan o'tgan o'quvchilar ({allStudents.length})
             </h2>
 
+            {accessDaysMsg && (
+              <div className={`mb-3 p-2 rounded-lg text-xs ${accessDaysMsg.includes('saqlandi') ? 'bg-green-50 dark:bg-green-500/10 text-green-700 dark:text-green-400' : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'}`}>
+                {accessDaysMsg}
+              </div>
+            )}
+
             {loading ? (
               <p className="text-gray-800 dark:text-gray-200">Yuklanmoqda...</p>
             ) : allStudents.length === 0 ? (
@@ -315,11 +342,28 @@ export function AdminPage() {
                         A'zo bo'lgan sana: {new Date(u.createdAt).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Obuna: {u.subscription?.isActive && u.subscriptionDaysLeft > 0 ? `${u.subscriptionDaysLeft} kun` : 'Mavjud emas'}
+                        Darsga kirish: {u.accessDays > 0 ? `${u.accessDays} kun` : 'Yopiq'}
                       </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          min={0}
+                          max={365}
+                          value={accessDaysMap[u.id] ?? u.accessDays}
+                          onChange={(e) => setAccessDaysMap((prev) => ({ ...prev, [u.id]: Math.max(0, Math.min(365, parseInt(e.target.value) || 0)) }))}
+                          className="w-20 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                        />
+                        <button
+                          disabled={accessDaysSavingId === u.id}
+                          onClick={() => handleSaveAccessDays(u.id)}
+                          className="px-3 py-1.5 rounded-lg bg-uzum text-white hover:bg-uzum/90 text-xs font-medium disabled:opacity-50"
+                        >
+                          {accessDaysSavingId === u.id ? '...' : 'Saqlash'}
+                        </button>
+                      </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-full ${u.isVerified ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'}`}>
                           {u.isVerified ? 'Tasdiqlangan' : 'Kutilmoqda'}

@@ -12,15 +12,14 @@ const platformBadge = {
   both: 'Umumiy',
 }
 
-// Talabaning necha kun o'tganini va maksimum kunlarini hisoblaydi
+// Talabaga berilgan jami ochiq kunlar sonini hisoblaydi (1..N)
 function calcAvailableDay(subscription: { startDate: string; endDate: string; isActive: boolean; plan: string } | null): number {
   if (!subscription || !subscription.isActive) return 0
   const start = new Date(subscription.startDate).getTime()
+  const end = new Date(subscription.endDate).getTime()
   const now = Date.now()
-  if (now < start) return 0
-  const daysSince = Math.floor((now - start) / 86400000) + 1
-  const maxDays = subscription.plan === 'THREE_MONTHS' ? 90 : 30
-  return Math.min(daysSince, maxDays)
+  if (now < start || now > end) return 0
+  return Math.max(Math.floor((end - start) / 86400000) + 1, 0)
 }
 
 export function WrittenModulePage() {

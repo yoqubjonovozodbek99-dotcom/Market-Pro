@@ -152,6 +152,7 @@ export interface ApiSubscription {
 
 export interface AdminStudent extends ApiUser {
   subscription: ApiSubscription | null
+  accessDays: number
   subscriptionDaysLeft: number
 }
 
@@ -259,6 +260,13 @@ export async function rejectUser(userId: string) {
 
 export async function deleteAdminUser(userId: string) {
   return request('/api/admin/users/' + userId, { method: 'DELETE' })
+}
+
+export async function saveAdminUserAccessDays(userId: string, accessDays: number) {
+  return request<{ user: AdminStudent }>('/api/admin/users/' + userId + '/access-days', {
+    method: 'POST',
+    body: JSON.stringify({ accessDays }),
+  })
 }
 
 // ===== LESSON DAY CONFIGS =====

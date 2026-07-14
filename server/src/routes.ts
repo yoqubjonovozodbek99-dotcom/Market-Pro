@@ -20,6 +20,12 @@ function addDays(date: Date, days: number) {
   return nextDate
 }
 
+function calcSubscriptionDurationDays(subscription: { startDate: Date; endDate: Date; isActive: boolean } | null) {
+  if (!subscription || !subscription.isActive) return 0
+  const ms = subscription.endDate.getTime() - subscription.startDate.getTime()
+  return Math.max(Math.floor(ms / 86400000) + 1, 0)
+}
+
 router.post('/auth/site-login', async (req, res) => {
   try {
     const { login, password } = req.body
@@ -445,6 +451,7 @@ router.get('/admin/users', requireAuth, requireAdmin, async (_req, res) => {
     const usersWithSubscription = await Promise.all(
       users.map(async (user) => {
         const subscription = await prisma.subscription.findUnique({ where: { userId: user.id } })
+        const accessDays = calcSubscriptionDurationDays(subscription)
         const subscriptionDaysLeft = subscription?.isActive && new Date() < subscription.endDate
           ? Math.max(Math.ceil((subscription.endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)), 0)
           : 0
@@ -452,6 +459,7 @@ router.get('/admin/users', requireAuth, requireAdmin, async (_req, res) => {
         return {
           ...sanitizeUser(user),
           subscription,
+          accessDays,
           subscriptionDaysLeft,
         }
       })
@@ -461,6 +469,69 @@ router.get('/admin/users', requireAuth, requireAdmin, async (_req, res) => {
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to load users' })
+  }
+})
+
+router.post('/admin/users/:userId/access-days', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params
+    const raw = Number(req.body?.accessDays)
+    if (!Number.isFinite(raw)) {
+      return res.status(400).json({ error: 'accessDays raqam bo\'lishi kerak' })
+    }
+
+    const accessDays = Math.max(0, Math.min(365, Math.floor(raw)))
+    const targetUser = await prisma.user.findUnique({ where: { id: userId } })
+    if (!targetUser || targetUser.role !== 'STUDENT') {
+      return res.status(404).json({ error: 'Student not found' })
+    }
+
+    let subscription = await prisma.subscription.findUnique({ where: { userId } })
+
+    if (accessDays === 0) {
+      if (subscription) {
+        subscription = await prisma.subscription.update({
+          where: { userId },
+          data: { isActive: false },
+        })
+      }
+    } else {
+      const startDate = new Date()
+      const endDate = addDays(startDate, accessDays - 1)
+      const plan = accessDays >= 90 ? 'THREE_MONTHS' : 'MONTHLY'
+      subscription = await prisma.subscription.upsert({
+        where: { userId },
+        create: {
+          userId,
+          plan,
+          startDate,
+          endDate,
+          isActive: true,
+        },
+        update: {
+          plan,
+          startDate,
+          endDate,
+          isActive: true,
+        },
+      })
+    }
+
+    const subscriptionDaysLeft = subscription?.isActive && new Date() < subscription.endDate
+      ? Math.max(Math.ceil((subscription.endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)), 0)
+      : 0
+
+    res.json({
+      user: {
+        ...sanitizeUser(targetUser),
+        subscription,
+        accessDays,
+        subscriptionDaysLeft,
+      },
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to save access days' })
   }
 })
 
