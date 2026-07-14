@@ -150,6 +150,11 @@ export interface ApiSubscription {
   isActive: boolean
 }
 
+export interface AdminStudent extends ApiUser {
+  subscription: ApiSubscription | null
+  subscriptionDaysLeft: number
+}
+
 export async function registerUser(data: {
   name: string
   email: string
@@ -241,7 +246,7 @@ export async function fetchPendingUsers() {
 }
 
 export async function fetchAdminUsers() {
-  return request<{ users: ApiUser[] }>('/api/admin/users')
+  return request<{ users: AdminStudent[] }>('/api/admin/users')
 }
 
 export async function approveUser(userId: string) {

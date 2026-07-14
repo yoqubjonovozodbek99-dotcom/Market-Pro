@@ -13,6 +13,7 @@ import {
   confirmPayment,
   rejectPayment,
   type ApiUser,
+  type AdminStudent,
   type AdminPayment,
 } from '../api'
 import { writtenModules } from '../data/writtenLessons'
@@ -25,7 +26,7 @@ export function AdminPage() {
 
   // --- Foydalanuvchilar tab ---
   const [pending, setPending] = useState<ApiUser[]>([])
-  const [allStudents, setAllStudents] = useState<ApiUser[]>([])
+  const [allStudents, setAllStudents] = useState<AdminStudent[]>([])
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -312,6 +313,9 @@ export function AdminPage() {
                       {u.phone && <div className="text-sm text-gray-500 dark:text-gray-400">{u.phone}</div>}
                       <div className="text-xs text-gray-400 mt-1">
                         A'zo bo'lgan sana: {new Date(u.createdAt).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Obuna: {u.subscription?.isActive && u.subscriptionDaysLeft > 0 ? `${u.subscriptionDaysLeft} kun` : 'Mavjud emas'}
                       </div>
                     </div>
 

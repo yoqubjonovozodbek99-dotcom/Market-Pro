@@ -442,7 +442,22 @@ router.get('/admin/users', requireAuth, requireAdmin, async (_req, res) => {
       orderBy: { createdAt: 'desc' },
     })
 
-    res.json({ users: users.map(sanitizeUser) })
+    const usersWithSubscription = await Promise.all(
+      users.map(async (user) => {
+        const subscription = await prisma.subscription.findUnique({ where: { userId: user.id } })
+        const subscriptionDaysLeft = subscription?.isActive && new Date() < subscription.endDate
+          ? Math.max(Math.ceil((subscription.endDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24)), 0)
+          : 0
+
+        return {
+          ...sanitizeUser(user),
+          subscription,
+          subscriptionDaysLeft,
+        }
+      })
+    )
+
+    res.json({ users: usersWithSubscription })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to load users' })
