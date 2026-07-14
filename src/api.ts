@@ -224,10 +224,10 @@ export async function fetchAdminPayments() {
   return request<{ payments: AdminPayment[] }>('/api/admin/payments')
 }
 
-export async function confirmPayment(id: string, startDate?: string) {
-  return request<{ startDate: string; endDate: string }>('/api/admin/payments/' + id + '/confirm', {
+export async function confirmPayment(id: string, startDate?: string, durationDays?: number) {
+  return request<{ startDate: string; endDate: string; durationDays: number }>('/api/admin/payments/' + id + '/confirm', {
     method: 'POST',
-    body: JSON.stringify({ startDate }),
+    body: JSON.stringify({ startDate, durationDays }),
   })
 }
 

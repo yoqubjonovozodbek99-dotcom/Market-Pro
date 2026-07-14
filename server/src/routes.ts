@@ -503,7 +503,7 @@ router.get('/admin/payments', requireAuth, requireAdmin, async (_req, res) => {
 router.post('/admin/payments/:id/confirm', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
   try {
     const { id } = req.params
-    const { startDate } = req.body as { startDate?: string }
+    const { startDate, durationDays } = req.body as { startDate?: string; durationDays?: number }
 
     const payment = await prisma.payment.findUnique({ where: { id } })
     if (!payment) {
@@ -511,7 +511,9 @@ router.post('/admin/payments/:id/confirm', requireAuth, requireAdmin, async (req
     }
 
     const start = startDate ? new Date(startDate) : new Date()
-    const end = addDays(start, payment.plan === 'THREE_MONTHS' ? 90 : 30)
+    const defaultDays = payment.plan === 'THREE_MONTHS' ? 90 : 30
+    const days = Number.isFinite(Number(durationDays)) ? Math.max(1, Math.min(365, Math.floor(Number(durationDays)))) : defaultDays
+    const end = addDays(start, days)
 
     await prisma.$transaction([
       prisma.payment.update({
@@ -540,7 +542,7 @@ router.post('/admin/payments/:id/confirm', requireAuth, requireAdmin, async (req
       }),
     ])
 
-    res.json({ startDate: start.toISOString(), endDate: end.toISOString() })
+    res.json({ startDate: start.toISOString(), endDate: end.toISOString(), durationDays: days })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to confirm payment' })

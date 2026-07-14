@@ -70,6 +70,7 @@ export function AdminPage() {
   const [paymentBusy, setPaymentBusy] = useState<string | null>(null)
   const [paymentMsg, setPaymentMsg] = useState('')
   const [startDates, setStartDates] = useState<Record<string, string>>({})
+  const [durationDays, setDurationDays] = useState<Record<string, number>>({})
 
   const loadPayments = () => {
     setPaymentsLoading(true)
@@ -87,9 +88,9 @@ export function AdminPage() {
     setPaymentBusy(id)
     setPaymentMsg('')
     try {
-      const res = await confirmPayment(id, startDates[id] || undefined)
+      const res = await confirmPayment(id, startDates[id] || undefined, durationDays[id])
       setPayments((prev) => prev.map((p) => p.id === id ? { ...p, status: 'CONFIRMED' } : p))
-      setPaymentMsg(`✓ Tasdiqlandi. Obuna: ${new Date(res.startDate).toLocaleDateString()} – ${new Date(res.endDate).toLocaleDateString()}`)
+      setPaymentMsg(`✓ Tasdiqlandi. ${res.durationDays} kun: ${new Date(res.startDate).toLocaleDateString()} – ${new Date(res.endDate).toLocaleDateString()}`)
     } catch (err) {
       setPaymentMsg(err instanceof Error ? err.message : 'Xatolik')
     } finally {
@@ -486,6 +487,17 @@ export function AdminPage() {
                             type="date"
                             value={startDates[p.id] ?? new Date().toISOString().slice(0, 10)}
                             onChange={(e) => setStartDates((prev) => ({ ...prev, [p.id]: e.target.value }))}
+                            className="w-full px-2 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-uzum/40"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-400 block mb-1">Kirish kunlari:</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={365}
+                            value={durationDays[p.id] ?? (p.plan === 'THREE_MONTHS' ? 90 : 30)}
+                            onChange={(e) => setDurationDays((prev) => ({ ...prev, [p.id]: Math.max(1, Math.min(365, parseInt(e.target.value) || 1)) }))}
                             className="w-full px-2 py-1 text-sm rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-uzum/40"
                           />
                         </div>
