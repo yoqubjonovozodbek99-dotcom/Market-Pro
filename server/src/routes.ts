@@ -296,7 +296,7 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
     res.json({
       user: sanitizeUser(user),
       subscription,
-      isSubscribed: subscription?.isActive && new Date() < subscription.endDate,
+      isSubscribed: Boolean(subscription?.isActive),
     })
   } catch (error) {
     console.error(error)
@@ -681,7 +681,7 @@ router.get('/check-subscription', requireAuth, async (req: AuthRequest, res) => 
     const userId = req.userId!
     const subscription = await prisma.subscription.findUnique({ where: { userId } })
 
-    const isActive = subscription?.isActive && new Date() < subscription.endDate
+    const isActive = Boolean(subscription?.isActive)
 
     res.json({
       hasSubscription: !!subscription,

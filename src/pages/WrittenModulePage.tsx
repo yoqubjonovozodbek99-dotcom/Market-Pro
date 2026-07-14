@@ -17,8 +17,7 @@ function calcAvailableDay(subscription: { startDate: string; endDate: string; is
   if (!subscription || !subscription.isActive) return 0
   const start = new Date(subscription.startDate).getTime()
   const end = new Date(subscription.endDate).getTime()
-  const now = Date.now()
-  if (now < start || now > end) return 0
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0
   return Math.max(Math.floor((end - start) / 86400000) + 1, 0)
 }
 
