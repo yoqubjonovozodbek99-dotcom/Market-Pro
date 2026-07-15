@@ -167,21 +167,32 @@ router.post('/auth/login', async (req, res) => {
       })
     }
 
-    await prisma.userSession.upsert({
-      where: { userId_deviceId: { userId: user.id, deviceId } },
-      create: {
-        userId: user.id,
-        ipAddress,
-        userAgent,
-        deviceId,
-      },
-      update: {
-        ipAddress,
-        userAgent,
-        lastSeenAt: new Date(),
-        isActive: true,
-      },
+    const existingSession = await prisma.userSession.findFirst({
+      where: { userId: user.id, deviceId },
+      select: { id: true },
     })
+
+    if (existingSession) {
+      await prisma.userSession.update({
+        where: { id: existingSession.id },
+        data: {
+          ipAddress,
+          userAgent,
+          lastSeenAt: new Date(),
+          isActive: true,
+        },
+      })
+    } else {
+      await prisma.userSession.create({
+        data: {
+          userId: user.id,
+          ipAddress,
+          userAgent,
+          deviceId,
+          isActive: true,
+        },
+      })
+    }
 
     const token = signToken({ userId: user.id }, process.env.JWT_SECRET!, process.env.JWT_EXPIRE || '15m')
     const refreshToken = signToken({ userId: user.id }, process.env.JWT_REFRESH_SECRET!, process.env.JWT_REFRESH_EXPIRE || '30d')
