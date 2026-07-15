@@ -32,14 +32,40 @@ export function WrittenModulePage() {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    Promise.all([fetchLessonDayConfigs(), user ? fetchMe() : Promise.resolve(null)])
-      .then(([configRes, meRes]) => {
-        setDayConfigs(configRes.configs)
-        const sub = (meRes as any)?.subscription ?? null
-        setAvailableUpTo(calcAvailableDay(sub))
-      })
-      .catch(() => {})
-      .finally(() => setLoaded(true))
+    let mounted = true
+
+    const load = async () => {
+      try {
+        const [configRes, meRes] = await Promise.allSettled([
+          fetchLessonDayConfigs(),
+          user ? fetchMe() : Promise.resolve(null),
+        ])
+
+        if (!mounted) return
+
+        if (configRes.status === 'fulfilled') {
+          setDayConfigs(configRes.value.configs)
+        }
+
+        if (meRes.status === 'fulfilled') {
+          const accessDays = Number((meRes.value as any)?.accessDays ?? 0)
+          if (Number.isFinite(accessDays) && accessDays >= 0) {
+            setAvailableUpTo(accessDays)
+          } else {
+            const sub = (meRes.value as any)?.subscription ?? null
+            setAvailableUpTo(calcAvailableDay(sub))
+          }
+        }
+      } finally {
+        if (mounted) setLoaded(true)
+      }
+    }
+
+    load()
+
+    return () => {
+      mounted = false
+    }
   }, [user])
 
   if (!mod || !mod.available) {

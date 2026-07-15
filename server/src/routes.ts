@@ -292,10 +292,12 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
     if (!user) return res.status(404).json({ error: 'User not found' })
 
     const subscription = await prisma.subscription.findUnique({ where: { userId: user.id } })
+    const accessDays = calcSubscriptionDurationDays(subscription)
 
     res.json({
       user: sanitizeUser(user),
       subscription,
+      accessDays,
       isSubscribed: Boolean(subscription?.isActive),
     })
   } catch (error) {

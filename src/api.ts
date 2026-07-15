@@ -189,7 +189,7 @@ export async function logoutUser() {
 }
 
 export async function fetchMe() {
-  return request<{ user: ApiUser; subscription: ApiSubscription | null; isSubscribed: boolean }>('/api/me')
+  return request<{ user: ApiUser; subscription: ApiSubscription | null; accessDays: number; isSubscribed: boolean }>('/api/me')
 }
 
 export interface ProgressSummary {
