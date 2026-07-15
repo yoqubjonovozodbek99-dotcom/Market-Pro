@@ -70,7 +70,7 @@ export function WrittenLessonPage() {
         return
       }
 
-      if (user?.role !== 'ADMIN' && !matchesTrack(lesson.platform, track)) {
+      if (!matchesTrack(lesson.platform, track)) {
         if (mounted) {
           setAllowed(false)
           setChecking(false)
