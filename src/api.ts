@@ -36,6 +36,14 @@ function setRefreshToken(token: string) {
   localStorage.setItem(REFRESH_TOKEN_KEY, token)
 }
 
+function redirectToLoginIfBrowser() {
+  if (typeof window === 'undefined') return
+  const path = window.location.pathname
+  if (path.endsWith('/kirish') || path.endsWith('/kirish/')) return
+  const loginPath = path.startsWith('/Market-Pro') ? '/Market-Pro/kirish' : '/kirish'
+  window.location.assign(loginPath)
+}
+
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
   localStorage.removeItem(REFRESH_TOKEN_KEY)
@@ -108,6 +116,8 @@ async function request<T>(path: string, options: RequestInit = {}, allowRefresh 
     if (refreshed) {
       return request<T>(path, options, false)
     }
+    // Sessiya eskirgan bo'lsa, foydalanuvchini qayta login qilishga yuboramiz.
+    redirectToLoginIfBrowser()
   }
 
   if (!response.ok) {
