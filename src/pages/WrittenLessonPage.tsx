@@ -68,7 +68,9 @@ export function WrittenLessonPage() {
 
         const requiredDay = lesson.lessonNum || 1
         const accessDays = Number(me.accessDays ?? 0)
-        const canOpen = Number.isFinite(accessDays) && accessDays >= requiredDay
+        const fallbackDays = calcAvailableDay(me.subscription)
+        const resolvedDays = Number.isFinite(accessDays) && accessDays >= 0 ? Math.max(accessDays, fallbackDays) : fallbackDays
+        const canOpen = resolvedDays >= requiredDay
 
         if (mounted) {
           setAllowed(canOpen)

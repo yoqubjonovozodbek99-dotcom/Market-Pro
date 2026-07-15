@@ -40,12 +40,10 @@ export function WrittenModulePage() {
         if (!mounted) return
 
         const serverAccessDays = Number((meRes as any)?.accessDays ?? accessDays)
-        if (Number.isFinite(serverAccessDays) && serverAccessDays >= 0) {
-          setAvailableUpTo(serverAccessDays)
-        } else {
-          const sub = (meRes as any)?.subscription ?? null
-          setAvailableUpTo(calcAvailableDay(sub))
-        }
+        const sub = (meRes as any)?.subscription ?? null
+        const fallbackDays = calcAvailableDay(sub)
+        const resolved = Number.isFinite(serverAccessDays) && serverAccessDays >= 0 ? Math.max(serverAccessDays, fallbackDays) : fallbackDays
+        setAvailableUpTo(resolved)
       } catch {
         if (Number.isFinite(accessDays) && accessDays >= 0) {
           setAvailableUpTo(accessDays)

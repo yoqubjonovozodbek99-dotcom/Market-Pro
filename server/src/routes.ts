@@ -21,9 +21,10 @@ function addDays(date: Date, days: number) {
 }
 
 function calcSubscriptionDurationDays(subscription: { startDate: Date; endDate: Date; isActive: boolean } | null) {
-  if (!subscription || !subscription.isActive) return 0
+  if (!subscription) return 0
   const ms = subscription.endDate.getTime() - subscription.startDate.getTime()
-  return Math.max(Math.floor(ms / 86400000) + 1, 0)
+  if (!Number.isFinite(ms) || ms < 0) return 0
+  return Math.floor(ms / 86400000) + 1
 }
 
 router.post('/auth/site-login', async (req, res) => {
@@ -492,10 +493,8 @@ router.post('/admin/users/:userId/access-days', requireAuth, requireAdmin, async
 
     if (accessDays === 0) {
       if (subscription) {
-        subscription = await prisma.subscription.update({
-          where: { userId },
-          data: { isActive: false },
-        })
+        await prisma.subscription.delete({ where: { userId } })
+        subscription = null
       }
     } else {
       const startDate = new Date()
