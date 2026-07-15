@@ -5,6 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import { fetchMe, fetchSubscriptionStatus } from '../api'
 import { getWrittenLesson, getWrittenModule } from '../data/writtenLessons'
+import { getStudyTrack, matchesTrack, type StudyTrack } from '../data/writtenLessons/track'
 import { LessonContent } from '../components/LessonContent'
 
 function calcAvailableDay(subscription: { startDate: string; endDate: string; isActive: boolean; plan: string } | null): number {
@@ -21,6 +22,7 @@ export function WrittenLessonPage() {
   const { user, accessDays } = useAuth()
   const [allowed, setAllowed] = useState<boolean>(true)
   const [checking, setChecking] = useState<boolean>(true)
+  const [track, setTrack] = useState<StudyTrack>('both')
 
   const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
   const lesson = moduleSlug && lessonId ? getWrittenLesson(moduleSlug, lessonId) : undefined
@@ -39,9 +41,14 @@ export function WrittenLessonPage() {
   }
 
   const title = lang === 'uz' ? lesson.title : lesson.titleRu
-  const lessonIndex = mod.lessons.findIndex((l) => l.id === lesson.id)
-  const prev = lessonIndex > 0 ? mod.lessons[lessonIndex - 1] : null
-  const next = lessonIndex < mod.lessons.length - 1 ? mod.lessons[lessonIndex + 1] : null
+  const filteredLessons = mod.lessons.filter((l) => matchesTrack(l.platform, track))
+  const lessonIndex = filteredLessons.findIndex((l) => l.id === lesson.id)
+  const prev = lessonIndex > 0 ? filteredLessons[lessonIndex - 1] : null
+  const next = lessonIndex < filteredLessons.length - 1 ? filteredLessons[lessonIndex + 1] : null
+
+  useEffect(() => {
+    setTrack(getStudyTrack())
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -63,10 +70,18 @@ export function WrittenLessonPage() {
         return
       }
 
+      if (user?.role !== 'ADMIN' && !matchesTrack(lesson.platform, track)) {
+        if (mounted) {
+          setAllowed(false)
+          setChecking(false)
+        }
+        return
+      }
+
       try {
         const me = await fetchMe()
 
-        const requiredDay = lesson.lessonNum || 1
+        const requiredDay = filteredLessons.findIndex((l) => l.id === lesson.id) + 1
         const accessDays = Number(me.accessDays ?? 0)
         const fallbackDays = calcAvailableDay(me.subscription)
         const resolvedDays = Number.isFinite(accessDays) && accessDays >= 0 ? Math.max(accessDays, fallbackDays) : fallbackDays
@@ -76,14 +91,14 @@ export function WrittenLessonPage() {
           setAllowed(canOpen)
         }
       } catch {
-        const requiredDay = lesson.lessonNum || 1
+        const requiredDay = filteredLessons.findIndex((l) => l.id === lesson.id) + 1
         if (Number.isFinite(accessDays) && accessDays >= requiredDay) {
           if (mounted) setAllowed(true)
           return
         }
         try {
           const subRes = await fetchSubscriptionStatus()
-          const requiredDay = lesson.lessonNum || 1
+          const requiredDay = filteredLessons.findIndex((l) => l.id === lesson.id) + 1
           const accessDays = calcAvailableDay(subRes.subscription)
           if (mounted) {
             setAllowed(accessDays >= requiredDay)
@@ -105,7 +120,7 @@ export function WrittenLessonPage() {
     return () => {
       mounted = false
     }
-  }, [lessonId, user?.role, accessDays])
+  }, [lessonId, user?.role, accessDays, track, lesson.id, lesson.platform, filteredLessons])
 
   if (checking) {
     return (

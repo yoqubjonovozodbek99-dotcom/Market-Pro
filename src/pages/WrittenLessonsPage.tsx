@@ -1,10 +1,26 @@
 import { Link } from 'react-router-dom'
 import { ArrowLeft, BookOpen, Clock, Lock, CheckCircle2 } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { writtenModules } from '../data/writtenLessons'
+import { getStudyTrack, setStudyTrack, type StudyTrack } from '../data/writtenLessons/track'
 
 export function WrittenLessonsPage() {
   const { t, lang } = useLanguage()
+  const [track, setTrack] = useState<StudyTrack>('both')
+
+  useEffect(() => {
+    setTrack(getStudyTrack())
+  }, [])
+
+  const trackLabel = useMemo(
+    () => ({
+      both: lang === 'uz' ? 'Barchasi' : 'Все',
+      uzum: 'Uzum',
+      yandex: 'Yandex',
+    }),
+    [lang],
+  )
 
   return (
     <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
@@ -22,6 +38,24 @@ export function WrittenLessonsPage() {
           {t.lessonsHub.writtenTitle}
         </h1>
         <p className="text-gray-500 dark:text-gray-400">{t.lessonsHub.writtenPageDesc}</p>
+        <div className="mt-4 inline-flex rounded-xl border border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-900/70 p-1">
+          {(['both', 'uzum', 'yandex'] as StudyTrack[]).map((key) => (
+            <button
+              key={key}
+              onClick={() => {
+                setTrack(key)
+                setStudyTrack(key)
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                track === key
+                  ? 'bg-uzum text-white dark:bg-blue-500'
+                  : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+              }`}
+            >
+              {trackLabel[key]}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="space-y-4">

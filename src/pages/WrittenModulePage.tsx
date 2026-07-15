@@ -4,6 +4,7 @@ import { ArrowLeft, Clock, ChevronRight, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getWrittenModule } from '../data/writtenLessons'
+import { getStudyTrack, matchesTrack, type StudyTrack } from '../data/writtenLessons/track'
 import { fetchMe, fetchSubscriptionStatus } from '../api'
 
 const platformBadge = {
@@ -26,9 +27,14 @@ export function WrittenModulePage() {
   const { t, lang } = useLanguage()
   const { user, accessDays } = useAuth()
   const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
+  const [track, setTrack] = useState<StudyTrack>('both')
 
   const [availableUpTo, setAvailableUpTo] = useState<number>(0)
   const [loaded, setLoaded] = useState(false)
+
+  useEffect(() => {
+    setTrack(getStudyTrack())
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -85,6 +91,7 @@ export function WrittenModulePage() {
 
   const title = lang === 'uz' ? mod.title : mod.titleRu
   const desc = lang === 'uz' ? mod.desc : mod.descRu
+  const visibleLessons = mod.lessons.filter((lesson) => matchesTrack(lesson.platform, track))
 
   return (
     <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
@@ -112,10 +119,10 @@ export function WrittenModulePage() {
       </div>
 
       <div className="space-y-3">
-        {mod.lessons.map((lesson, index) => {
+        {visibleLessons.map((lesson, index) => {
           const lessonTitle = lang === 'uz' ? lesson.title : lesson.titleRu
           const badge = platformBadge[lesson.platform]
-          const requiredDay = lesson.lessonNum || index + 1
+          const requiredDay = index + 1
           const isAdmin = user?.role === 'ADMIN'
           const isOpen = isAdmin || !loaded || availableUpTo >= requiredDay
 
