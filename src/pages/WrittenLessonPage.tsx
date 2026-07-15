@@ -3,9 +3,17 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, Clock, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchMe } from '../api'
+import { fetchMe, fetchSubscriptionStatus } from '../api'
 import { getWrittenLesson, getWrittenModule } from '../data/writtenLessons'
 import { LessonContent } from '../components/LessonContent'
+
+function calcAvailableDay(subscription: { startDate: string; endDate: string; isActive: boolean; plan: string } | null): number {
+  if (!subscription || !subscription.isActive) return 0
+  const start = new Date(subscription.startDate).getTime()
+  const end = new Date(subscription.endDate).getTime()
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0
+  return Math.max(Math.floor((end - start) / 86400000) + 1, 0)
+}
 
 export function WrittenLessonPage() {
   const { moduleSlug, lessonId } = useParams<{ moduleSlug: string; lessonId: string }>()
@@ -66,8 +74,17 @@ export function WrittenLessonPage() {
           setAllowed(canOpen)
         }
       } catch {
-        if (mounted) {
-          setAllowed(false)
+        try {
+          const subRes = await fetchSubscriptionStatus()
+          const requiredDay = lesson.lessonNum || 1
+          const accessDays = calcAvailableDay(subRes.subscription)
+          if (mounted) {
+            setAllowed(accessDays >= requiredDay)
+          }
+        } catch {
+          if (mounted) {
+            setAllowed(false)
+          }
         }
       } finally {
         if (mounted) {

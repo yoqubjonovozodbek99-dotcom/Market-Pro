@@ -4,7 +4,7 @@ import { ArrowLeft, Clock, ChevronRight, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getWrittenModule } from '../data/writtenLessons'
-import { fetchMe } from '../api'
+import { fetchMe, fetchSubscriptionStatus } from '../api'
 
 const platformBadge = {
   uzum: 'Uzum Market',
@@ -35,7 +35,7 @@ export function WrittenModulePage() {
 
     const load = async () => {
       try {
-        const meRes = await (user ? fetchMe() : Promise.resolve(null))
+        const meRes = await fetchMe()
 
         if (!mounted) return
 
@@ -45,6 +45,16 @@ export function WrittenModulePage() {
         } else {
           const sub = (meRes as any)?.subscription ?? null
           setAvailableUpTo(calcAvailableDay(sub))
+        }
+      } catch {
+        try {
+          const subRes = await fetchSubscriptionStatus()
+          if (!mounted) return
+          const sub = subRes.subscription
+          setAvailableUpTo(calcAvailableDay(sub))
+        } catch {
+          if (!mounted) return
+          setAvailableUpTo(0)
         }
       } finally {
         if (mounted) setLoaded(true)

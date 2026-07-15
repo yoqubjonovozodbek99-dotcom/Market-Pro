@@ -192,6 +192,10 @@ export async function fetchMe() {
   return request<{ user: ApiUser; subscription: ApiSubscription | null; accessDays: number; isSubscribed: boolean }>('/api/me')
 }
 
+export async function fetchSubscriptionStatus() {
+  return request<{ hasSubscription: boolean; isSubscriptionActive: boolean; subscription: ApiSubscription | null }>('/api/check-subscription')
+}
+
 export interface ProgressSummary {
   totalLessons: number
   completedLessons: number
