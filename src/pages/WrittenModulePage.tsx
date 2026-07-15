@@ -125,7 +125,7 @@ export function WrittenModulePage() {
                   </h2>
                   <span className="text-xs text-gray-400 mt-1 flex items-center gap-1">
                     <Lock className="w-3 h-3" />
-                    {lang === 'uz' ? `${requiredDay}-kunda ochiladi` : `Откроется на ${requiredDay}-й день`}
+                    {lang === 'uz' ? `Kamida ${requiredDay} darslik kirish kerak` : `Нужно минимум ${requiredDay} уроков доступа`}
                   </span>
                 </div>
               </div>
