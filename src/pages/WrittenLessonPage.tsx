@@ -1,12 +1,18 @@
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Clock, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowLeft, Clock, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
+import { fetchLessonDayConfigs, fetchMe } from '../api'
 import { getWrittenLesson, getWrittenModule } from '../data/writtenLessons'
 import { LessonContent } from '../components/LessonContent'
 
 export function WrittenLessonPage() {
   const { moduleSlug, lessonId } = useParams<{ moduleSlug: string; lessonId: string }>()
   const { t, lang } = useLanguage()
+  const { user } = useAuth()
+  const [allowed, setAllowed] = useState<boolean>(true)
+  const [checking, setChecking] = useState<boolean>(true)
 
   const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
   const lesson = moduleSlug && lessonId ? getWrittenLesson(moduleSlug, lessonId) : undefined
@@ -28,6 +34,85 @@ export function WrittenLessonPage() {
   const lessonIndex = mod.lessons.findIndex((l) => l.id === lesson.id)
   const prev = lessonIndex > 0 ? mod.lessons[lessonIndex - 1] : null
   const next = lessonIndex < mod.lessons.length - 1 ? mod.lessons[lessonIndex + 1] : null
+
+  useEffect(() => {
+    let mounted = true
+
+    const checkAccess = async () => {
+      if (user?.role === 'ADMIN') {
+        if (mounted) {
+          setAllowed(true)
+          setChecking(false)
+        }
+        return
+      }
+
+      if (!lessonId) {
+        if (mounted) {
+          setAllowed(false)
+          setChecking(false)
+        }
+        return
+      }
+
+      try {
+        const [cfg, me] = await Promise.all([
+          fetchLessonDayConfigs(),
+          fetchMe(),
+        ])
+
+        const requiredDay = cfg.configs[lessonId] ?? 1
+        const accessDays = Number(me.accessDays ?? 0)
+        const canOpen = Number.isFinite(accessDays) && accessDays >= requiredDay
+
+        if (mounted) {
+          setAllowed(canOpen)
+        }
+      } catch {
+        if (mounted) {
+          setAllowed(false)
+        }
+      } finally {
+        if (mounted) {
+          setChecking(false)
+        }
+      }
+    }
+
+    checkAccess()
+
+    return () => {
+      mounted = false
+    }
+  }, [lessonId, user?.role])
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+          <p className="text-gray-500">Yuklanmoqda...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!allowed) {
+    return (
+      <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
+        <div className="max-w-3xl mx-auto px-4 py-16 text-center">
+          <div className="w-12 h-12 mx-auto mb-4 rounded-2xl bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+            <Lock className="w-5 h-5 text-gray-500" />
+          </div>
+          <p className="text-gray-600 dark:text-gray-300 mb-3">
+            {lang === 'uz' ? 'Bu dars hali siz uchun ochilmagan.' : 'Этот урок пока недоступен для вас.'}
+          </p>
+          <Link to={`/darslar/yozma/${mod.slug}`} className="text-uzum dark:text-blue-400 underline">
+            {lang === 'uz' ? 'Modulga qaytish' : 'Вернуться к модулю'}
+          </Link>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">

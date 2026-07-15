@@ -114,7 +114,8 @@ export function WrittenModulePage() {
           const lessonTitle = lang === 'uz' ? lesson.title : lesson.titleRu
           const badge = platformBadge[lesson.platform]
           const requiredDay = dayConfigs[lesson.id] ?? 1
-          const isOpen = !loaded || availableUpTo >= requiredDay
+          const isAdmin = user?.role === 'ADMIN'
+          const isOpen = isAdmin || !loaded || availableUpTo >= requiredDay
 
           if (!isOpen) {
             return (
