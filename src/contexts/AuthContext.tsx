@@ -23,6 +23,18 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+function deriveAccessDays(me: { accessDays?: number; subscription?: { startDate?: string; endDate?: string; isActive?: boolean } | null }) {
+  const direct = Number(me.accessDays ?? 0)
+  if (Number.isFinite(direct) && direct > 0) return direct
+
+  const sub = me.subscription
+  if (!sub || sub.isActive === false) return 0
+  const start = new Date(sub.startDate ?? '').getTime()
+  const end = new Date(sub.endDate ?? '').getTime()
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return 0
+  return Math.floor((end - start) / 86400000) + 1
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(null)
   const [accessDays, setAccessDays] = useState(0)
@@ -37,7 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const me = await fetchMe()
       setUser(me.user)
-      setAccessDays(Number(me.accessDays ?? 0))
+      setAccessDays(deriveAccessDays(me as any))
     } catch {
       clearTokens()
       setUser(null)
@@ -62,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const me = await fetchMe()
         setUser(me.user)
-        setAccessDays(Number(me.accessDays ?? 0))
+        setAccessDays(deriveAccessDays(me as any))
       } catch {
         // Agar /me vaqtincha xato bersa ham login javobidagi user bilan davom etamiz
         setAccessDays(0)
