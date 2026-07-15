@@ -13,6 +13,7 @@ export class ApiError extends Error {
 
 interface AuthContextType {
   user: ApiUser | null
+  accessDays: number
   isLoading: boolean
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<void>
@@ -24,19 +25,23 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<ApiUser | null>(null)
+  const [accessDays, setAccessDays] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
 
   const loadUser = useCallback(async () => {
     if (!getAccessToken()) {
       setUser(null)
+      setAccessDays(0)
       return
     }
     try {
-      const { user } = await fetchMe()
-      setUser(user)
+      const me = await fetchMe()
+      setUser(me.user)
+      setAccessDays(Number(me.accessDays ?? 0))
     } catch {
       clearTokens()
       setUser(null)
+      setAccessDays(0)
     }
   }, [])
 
@@ -57,12 +62,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       try {
         const me = await fetchMe()
         setUser(me.user)
+        setAccessDays(Number(me.accessDays ?? 0))
       } catch {
         // Agar /me vaqtincha xato bersa ham login javobidagi user bilan davom etamiz
+        setAccessDays(0)
       }
     } catch (err) {
       clearTokens()
       setUser(null)
+      setAccessDays(0)
       if (err instanceof Error) {
         const error = new ApiError(err.message, (err as any).code)
         throw error
@@ -79,12 +87,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await logoutUser()
     setUser(null)
+    setAccessDays(0)
   }
 
   return (
     <AuthContext.Provider
       value={{
         user,
+        accessDays,
         isLoading,
         isAuthenticated: !!user,
         login,

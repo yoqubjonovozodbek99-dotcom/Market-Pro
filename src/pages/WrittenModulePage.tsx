@@ -24,7 +24,7 @@ function calcAvailableDay(subscription: { startDate: string; endDate: string; is
 export function WrittenModulePage() {
   const { moduleSlug } = useParams<{ moduleSlug: string }>()
   const { t, lang } = useLanguage()
-  const { user } = useAuth()
+  const { user, accessDays } = useAuth()
   const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
 
   const [availableUpTo, setAvailableUpTo] = useState<number>(0)
@@ -39,14 +39,18 @@ export function WrittenModulePage() {
 
         if (!mounted) return
 
-        const accessDays = Number((meRes as any)?.accessDays ?? 0)
-        if (Number.isFinite(accessDays) && accessDays >= 0) {
-          setAvailableUpTo(accessDays)
+        const serverAccessDays = Number((meRes as any)?.accessDays ?? accessDays)
+        if (Number.isFinite(serverAccessDays) && serverAccessDays >= 0) {
+          setAvailableUpTo(serverAccessDays)
         } else {
           const sub = (meRes as any)?.subscription ?? null
           setAvailableUpTo(calcAvailableDay(sub))
         }
       } catch {
+        if (Number.isFinite(accessDays) && accessDays >= 0) {
+          setAvailableUpTo(accessDays)
+          return
+        }
         try {
           const subRes = await fetchSubscriptionStatus()
           if (!mounted) return
@@ -66,7 +70,7 @@ export function WrittenModulePage() {
     return () => {
       mounted = false
     }
-  }, [user])
+  }, [user, accessDays])
 
   if (!mod || !mod.available) {
     return (

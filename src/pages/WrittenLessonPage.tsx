@@ -18,7 +18,7 @@ function calcAvailableDay(subscription: { startDate: string; endDate: string; is
 export function WrittenLessonPage() {
   const { moduleSlug, lessonId } = useParams<{ moduleSlug: string; lessonId: string }>()
   const { t, lang } = useLanguage()
-  const { user } = useAuth()
+  const { user, accessDays } = useAuth()
   const [allowed, setAllowed] = useState<boolean>(true)
   const [checking, setChecking] = useState<boolean>(true)
 
@@ -74,6 +74,11 @@ export function WrittenLessonPage() {
           setAllowed(canOpen)
         }
       } catch {
+        const requiredDay = lesson.lessonNum || 1
+        if (Number.isFinite(accessDays) && accessDays >= requiredDay) {
+          if (mounted) setAllowed(true)
+          return
+        }
         try {
           const subRes = await fetchSubscriptionStatus()
           const requiredDay = lesson.lessonNum || 1
@@ -98,7 +103,7 @@ export function WrittenLessonPage() {
     return () => {
       mounted = false
     }
-  }, [lessonId, user?.role])
+  }, [lessonId, user?.role, accessDays])
 
   if (checking) {
     return (
