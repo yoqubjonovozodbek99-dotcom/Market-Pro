@@ -1,5 +1,6 @@
 const API_BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000'
 const ACCESS_TOKEN_KEY = 'marketpro_access_token'
+const REFRESH_TOKEN_KEY = 'marketpro_refresh_token'
 
 export interface SiteAuthUser {
   login: string
@@ -23,13 +24,50 @@ function getAccessToken() {
 
 export { getAccessToken }
 
+function getRefreshToken() {
+  return localStorage.getItem(REFRESH_TOKEN_KEY)
+}
+
 function setToken(token: string) {
   localStorage.setItem(ACCESS_TOKEN_KEY, token)
 }
 
+function setRefreshToken(token: string) {
+  localStorage.setItem(REFRESH_TOKEN_KEY, token)
+}
+
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY)
+  localStorage.removeItem(REFRESH_TOKEN_KEY)
   localStorage.removeItem('marketpro_device_id') // Device ID-ni ham o'chir
+}
+
+async function refreshAccessToken() {
+  const refreshToken = getRefreshToken()
+  if (!refreshToken) return null
+
+  const response = await fetch(`${API_BASE}/api/auth/refresh`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ refreshToken }),
+  })
+
+  if (!response.ok) {
+    clearTokens()
+    return null
+  }
+
+  const body = await response.json().catch(() => null)
+  const newToken = body?.token
+  if (!newToken) {
+    clearTokens()
+    return null
+  }
+
+  setToken(newToken)
+  return newToken
 }
 
 function buildHeaders(contentType = true) {
@@ -47,7 +85,7 @@ function buildHeaders(contentType = true) {
   return headers
 }
 
-async function request<T>(path: string, options: RequestInit = {}) {
+async function request<T>(path: string, options: RequestInit = {}, allowRefresh = true) {
   // Cache busting uchun timestamp qo'shami
   const sep = path.includes('?') ? '&' : '?'
   const fullPath = `${path}${sep}_t=${Date.now()}`
@@ -62,6 +100,15 @@ async function request<T>(path: string, options: RequestInit = {}) {
 
   const response = await fetch(`${API_BASE}${fullPath}`, init)
   const body = await response.json().catch(() => null)
+
+  const isAuthEndpoint = path.startsWith('/api/auth/login') || path.startsWith('/api/auth/register') || path.startsWith('/api/auth/refresh')
+
+  if (response.status === 401 && allowRefresh && !isAuthEndpoint) {
+    const refreshed = await refreshAccessToken()
+    if (refreshed) {
+      return request<T>(path, options, false)
+    }
+  }
 
   if (!response.ok) {
     const error = new Error(body?.error ?? body?.message ?? response.statusText) as Error & {
@@ -175,6 +222,9 @@ export async function loginUser(data: { email: string; password: string }) {
     body: JSON.stringify(data),
   })
   setToken(result.token)
+  if (result.refreshToken) {
+    setRefreshToken(result.refreshToken)
+  }
   return result
 }
 
