@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { ArrowLeft, Clock, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchLessonDayConfigs, fetchMe } from '../api'
+import { fetchMe } from '../api'
 import { getWrittenLesson, getWrittenModule } from '../data/writtenLessons'
 import { LessonContent } from '../components/LessonContent'
 
@@ -56,12 +56,9 @@ export function WrittenLessonPage() {
       }
 
       try {
-        const [cfg, me] = await Promise.all([
-          fetchLessonDayConfigs(),
-          fetchMe(),
-        ])
+        const me = await fetchMe()
 
-        const requiredDay = cfg.configs[lessonId] ?? 1
+        const requiredDay = lesson.lessonNum || 1
         const accessDays = Number(me.accessDays ?? 0)
         const canOpen = Number.isFinite(accessDays) && accessDays >= requiredDay
 

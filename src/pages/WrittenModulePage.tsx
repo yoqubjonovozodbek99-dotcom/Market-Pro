@@ -4,7 +4,7 @@ import { ArrowLeft, Clock, ChevronRight, Lock } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 import { getWrittenModule } from '../data/writtenLessons'
-import { fetchLessonDayConfigs, fetchMe } from '../api'
+import { fetchMe } from '../api'
 
 const platformBadge = {
   uzum: 'Uzum Market',
@@ -27,7 +27,6 @@ export function WrittenModulePage() {
   const { user } = useAuth()
   const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
 
-  const [dayConfigs, setDayConfigs] = useState<Record<string, number>>({})
   const [availableUpTo, setAvailableUpTo] = useState<number>(0)
   const [loaded, setLoaded] = useState(false)
 
@@ -36,25 +35,16 @@ export function WrittenModulePage() {
 
     const load = async () => {
       try {
-        const [configRes, meRes] = await Promise.allSettled([
-          fetchLessonDayConfigs(),
-          user ? fetchMe() : Promise.resolve(null),
-        ])
+        const meRes = await (user ? fetchMe() : Promise.resolve(null))
 
         if (!mounted) return
 
-        if (configRes.status === 'fulfilled') {
-          setDayConfigs(configRes.value.configs)
-        }
-
-        if (meRes.status === 'fulfilled') {
-          const accessDays = Number((meRes.value as any)?.accessDays ?? 0)
-          if (Number.isFinite(accessDays) && accessDays >= 0) {
-            setAvailableUpTo(accessDays)
-          } else {
-            const sub = (meRes.value as any)?.subscription ?? null
-            setAvailableUpTo(calcAvailableDay(sub))
-          }
+        const accessDays = Number((meRes as any)?.accessDays ?? 0)
+        if (Number.isFinite(accessDays) && accessDays >= 0) {
+          setAvailableUpTo(accessDays)
+        } else {
+          const sub = (meRes as any)?.subscription ?? null
+          setAvailableUpTo(calcAvailableDay(sub))
         }
       } finally {
         if (mounted) setLoaded(true)
@@ -113,7 +103,7 @@ export function WrittenModulePage() {
         {mod.lessons.map((lesson, index) => {
           const lessonTitle = lang === 'uz' ? lesson.title : lesson.titleRu
           const badge = platformBadge[lesson.platform]
-          const requiredDay = dayConfigs[lesson.id] ?? 1
+          const requiredDay = lesson.lessonNum || index + 1
           const isAdmin = user?.role === 'ADMIN'
           const isOpen = isAdmin || !loaded || availableUpTo >= requiredDay
 

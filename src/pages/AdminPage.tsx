@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { CheckCircle2, XCircle, ShieldAlert, CalendarDays, Save, BookOpen, CreditCard, Clock } from 'lucide-react'
+import { CheckCircle2, XCircle, ShieldAlert, CreditCard, Clock } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import {
   fetchPendingUsers,
@@ -7,8 +7,6 @@ import {
   approveUser,
   rejectUser,
   deleteAdminUser,
-  fetchLessonDayConfigs,
-  saveLessonDayConfigs,
   fetchAdminPayments,
   confirmPayment,
   rejectPayment,
@@ -17,9 +15,8 @@ import {
   type AdminStudent,
   type AdminPayment,
 } from '../api'
-import { writtenModules } from '../data/writtenLessons'
 
-type Tab = 'users' | 'payments' | 'lessonDays'
+type Tab = 'users' | 'payments'
 
 export function AdminPage() {
   const MONTHLY_PRICE = 510000
@@ -63,25 +60,6 @@ export function AdminPage() {
   useEffect(() => {
     load()
   }, [])
-
-  // --- Dars kunlari tab ---
-  // dayMap: lessonKey -> availableDay (lokal tahrirlash uchun)
-  const [dayMap, setDayMap] = useState<Record<string, number>>({})
-  const [daysLoading, setDaysLoading] = useState(false)
-  const [daysSaving, setDaysSaving] = useState(false)
-  const [daysMsg, setDaysMsg] = useState('')
-
-  const loadDays = () => {
-    setDaysLoading(true)
-    fetchLessonDayConfigs()
-      .then((res) => setDayMap(res.configs))
-      .catch(() => setDayMap({}))
-      .finally(() => setDaysLoading(false))
-  }
-
-  useEffect(() => {
-    if (activeTab === 'lessonDays') loadDays()
-  }, [activeTab])
 
   // --- To'lovlar tab ---
   const [payments, setPayments] = useState<AdminPayment[]>([])
@@ -130,28 +108,6 @@ export function AdminPage() {
     }
   }
 
-  const handleDayChange = (lessonKey: string, value: number) => {
-    setDayMap((prev) => ({ ...prev, [lessonKey]: Math.max(1, Math.min(365, value)) }))
-  }
-
-  const handleSaveDays = async () => {
-    setDaysSaving(true)
-    setDaysMsg('')
-    try {
-      const configs = writtenModules.flatMap((mod) =>
-        mod.lessons.map((lesson) => ({
-          lessonKey: lesson.id,
-          availableDay: dayMap[lesson.id] ?? 1,
-        }))
-      )
-      const res = await saveLessonDayConfigs(configs)
-      setDaysMsg(`${res.saved} ta dars konfiguratsiyasi saqlandi ✓`)
-    } catch (err) {
-      setDaysMsg(err instanceof Error ? err.message : 'Saqlashda xatolik')
-    } finally {
-      setDaysSaving(false)
-    }
-  }
 
   if (!user || user.role !== 'ADMIN') {
     return (
@@ -241,17 +197,6 @@ export function AdminPage() {
               {pending.length}
             </span>
           )}
-        </button>
-        <button
-          onClick={() => setActiveTab('lessonDays')}
-          className={`flex items-center gap-2 px-3 py-2.5 text-xs sm:text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-            activeTab === 'lessonDays'
-              ? 'border-uzum text-uzum dark:text-blue-400 dark:border-blue-400'
-              : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
-          }`}
-        >
-          <CalendarDays className="w-4 h-4" />
-          Dars kunlari
         </button>
         <button
           onClick={() => setActiveTab('payments')}
@@ -425,78 +370,6 @@ export function AdminPage() {
             )}
           </div>
         </>
-      )}
-
-      {/* ====== DARS KUNLARI TAB ====== */}
-      {activeTab === 'lessonDays' && (
-        <div>
-          <p className="text-sm text-gray-800 dark:text-gray-200 mb-6">
-            Har bir dars uchun <strong>"Nechanchi kunda ochiladi"</strong> raqamini belgilang (1–365).
-            Talaba faqat obuna boshlanganidan shu kun o'tgandan keyin darsni ko'ra oladi.
-          </p>
-
-          {daysLoading ? (
-            <p className="text-gray-800 dark:text-gray-200">Yuklanmoqda...</p>
-          ) : (
-            <div className="space-y-8">
-              {writtenModules.map((mod) => (
-                <div key={mod.slug}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <BookOpen className="w-4 h-4 text-uzum dark:text-blue-400" />
-                    <h2 className="font-bold text-gray-900 dark:text-white">
-                      {mod.num}-modul: {mod.title}
-                    </h2>
-                    <span className="text-xs text-gray-400">({mod.lessons.length} dars)</span>
-                  </div>
-                  <div className="space-y-2">
-                    {mod.lessons.map((lesson, idx) => (
-                      <div
-                        key={lesson.id}
-                        className="flex flex-col sm:flex-row sm:items-center gap-3 px-3 sm:px-4 py-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
-                      >
-                        <span className="w-6 text-center text-xs font-bold text-gray-400 shrink-0">
-                          {idx + 1}
-                        </span>
-                        <span className="flex-1 text-sm text-gray-900 dark:text-gray-100 min-w-0 break-words">
-                          {lesson.title}
-                        </span>
-                        <div className="flex items-center justify-between sm:justify-start gap-2 shrink-0 w-full sm:w-auto">
-                          <label className="text-xs text-gray-700 dark:text-gray-300 whitespace-nowrap">
-                            Kun raqami:
-                          </label>
-                          <input
-                            type="number"
-                            min={1}
-                            max={365}
-                            value={dayMap[lesson.id] ?? 1}
-                            onChange={(e) => handleDayChange(lesson.id, parseInt(e.target.value) || 1)}
-                            className="w-16 px-2 py-1 text-sm text-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-uzum/40"
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="mt-8 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            <button
-              onClick={handleSaveDays}
-              disabled={daysSaving || daysLoading}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-uzum text-white hover:bg-uzum/90 disabled:opacity-50 font-medium text-sm transition-colors"
-            >
-              <Save className="w-4 h-4" />
-              {daysSaving ? 'Saqlanmoqda...' : 'Saqlash'}
-            </button>
-            {daysMsg && (
-              <span className={`text-sm ${daysMsg.includes('✓') ? 'text-green-600 dark:text-green-400' : 'text-red-500'}`}>
-                {daysMsg}
-              </span>
-            )}
-          </div>
-        </div>
       )}
 
       {/* ====== TO'LOVLAR TAB ====== */}
