@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { useState, useEffect } from 'react'
 import { AnimatedSection } from '../components/AnimatedSection'
 import {
   Play,
@@ -17,7 +16,6 @@ import {
   Send,
   Mail,
   Phone,
-  Gift,
 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { teachers } from '../data/content'
@@ -26,40 +24,10 @@ import { UzumLogo, YandexLogo } from '../components/Logo'
 
 const featureIcons = [Radio, Video, FileText, CheckCircle2, MessageCircle, Shield]
 
-// Bepul dars sanasi: 12-iyul 2026, soat 20:30
-const FREE_LESSON_DATE = new Date('2026-07-12T20:30:00')
 const ZOOM_LINK = 'https://meet.google.com/cvi-padf-faf'
-
-function useCountdown(targetDate: Date) {
-  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0, started: false })
-
-  useEffect(() => {
-    const update = () => {
-      const now = new Date()
-      const diff = targetDate.getTime() - now.getTime()
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0, started: true })
-        return
-      }
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((diff / (1000 * 60)) % 60),
-        seconds: Math.floor((diff / 1000) % 60),
-        started: false,
-      })
-    }
-    update()
-    const interval = setInterval(update, 1000)
-    return () => clearInterval(interval)
-  }, [targetDate])
-
-  return timeLeft
-}
 
 export function HomePage() {
   const { t, lang } = useLanguage()
-  const countdown = useCountdown(FREE_LESSON_DATE)
 
   const stats = [
     { value: siteConfig.targetStudents, label: t.stats.students, icon: Users },
@@ -69,7 +37,6 @@ export function HomePage() {
   ]
 
   const formatPrice = (n: number) => n.toLocaleString('uz-UZ')
-  const pad = (n: number) => String(n).padStart(2, '0')
 
   return (
     <div>
@@ -138,65 +105,46 @@ export function HomePage() {
         </div>
       </AnimatedSection>
 
-      {/* BEPUL DARS */}
+      {/* JONLI DARS */}
       <AnimatedSection className="py-12 bg-gradient-to-br from-purple-600 to-blue-600">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 text-center">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/20 text-white text-sm font-medium mb-4">
-            <Gift className="w-4 h-4" />
-            {lang === 'uz' ? 'Bepul dars' : 'Бесплатный урок'}
+            <Radio className="w-4 h-4" />
+            {lang === 'uz' ? 'Jonli darsga kirish' : 'Вход на живой урок'}
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-white mb-2">
             {lang === 'uz'
-              ? 'Uzum Marketda noldan boshlash'
-              : 'Начало с нуля на Uzum Market'}
+              ? 'Kunlik jonli darslar shu yerda'
+              : 'Ежедневные живые уроки здесь'}
           </h2>
           <p className="text-white/80 mb-8 text-sm md:text-base">
             {lang === 'uz'
-              ? '12-iyul 2026, soat 20:30 da boshlanadi'
-              : '12 июля 2026, в 20:30'}
+              ? 'Har kuni o‘tiladigan jonli darslarga ushbu tugma orqali to‘g‘ridan-to‘g‘ri kirasiz.'
+              : 'Через эту кнопку вы входите на ежедневные живые уроки.'}
           </p>
 
-          {countdown.started ? (
-            <a href={ZOOM_LINK}
+          <a href={ZOOM_LINK}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-3 px-6 py-3 bg-white rounded-2xl hover:bg-gray-50 transition-colors cursor-pointer"
           >
             <Play className="w-6 h-6 text-purple-600" />
             <span className="font-bold text-purple-600 text-lg">
-              {lang === 'uz' ? 'Darsga kirish' : 'Войти на урок'}
+              {lang === 'uz' ? 'Jonli darsga kirish' : 'Войти на живой урок'}
             </span>
           </a>
-          ) : (
-            <>
-              <div className="flex items-center justify-center gap-3 md:gap-6 mb-8">
-                {[
-                  { value: pad(countdown.days), label: lang === 'uz' ? 'kun' : 'дней' },
-                  { value: pad(countdown.hours), label: lang === 'uz' ? 'soat' : 'часов' },
-                  { value: pad(countdown.minutes), label: lang === 'uz' ? 'daqiqa' : 'минут' },
-                  { value: pad(countdown.seconds), label: lang === 'uz' ? 'soniya' : 'секунд' },
-                ].map((item, i) => (
-                  <div key={i} className="text-center">
-                    <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 backdrop-blur rounded-2xl flex items-center justify-center mb-2">
-                      <span className="text-2xl md:text-3xl font-black text-white">{item.value}</span>
-                    </div>
-                    <span className="text-white/70 text-xs">{item.label}</span>
-                  </div>
-                ))}
-              </div>
-              <a
-                href={siteConfig.telegramChannel}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 px-8 py-4 bg-white text-purple-600 rounded-xl font-bold hover:bg-gray-50 transition-colors"
-              >
-                <Send className="w-5 h-5" />
-                {lang === 'uz'
-                  ? 'Telegram kanalga obuna bo\'ling'
-                  : 'Подписаться на Telegram канал'}
-              </a>
-            </>
-          )}
+
+          <div className="mt-6">
+            <a
+              href={siteConfig.telegramChannel}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 border border-white/40 text-white rounded-xl font-medium hover:bg-white/10 transition-colors"
+            >
+              <Send className="w-4 h-4" />
+              {lang === 'uz' ? 'Dars jadvali (Telegram)' : 'Расписание уроков (Telegram)'}
+            </a>
+          </div>
         </div>
       </AnimatedSection>
 
