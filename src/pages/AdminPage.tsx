@@ -208,7 +208,7 @@ export function AdminPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 md:py-16 pb-24 md:pb-16">
+    <div className="max-w-7xl mx-auto px-3 sm:px-6 py-6 md:py-16 pb-24 md:pb-16">
       <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Admin panel</h1>
 
       {/* Tab navigatsiya */}
@@ -325,7 +325,7 @@ export function AdminPage() {
                 {allStudents.map((u) => (
                   <div
                     key={u.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
+                    className="grid gap-3 lg:grid-cols-[260px_minmax(0,1fr)_auto] lg:items-start p-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900"
                   >
                     <div>
                       <div className="font-semibold text-gray-900 dark:text-white">{u.name}</div>
@@ -340,7 +340,7 @@ export function AdminPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <div className="grid gap-2">
+                      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                         {moduleLimits.map((m) => {
                           const uzumKey = accessKey(u.id, m.moduleNum, 'uzum')
                           const yandexKey = accessKey(u.id, m.moduleNum, 'yandex')
@@ -349,7 +349,7 @@ export function AdminPage() {
                           const saveId = `${u.id}:${m.moduleNum}`
 
                           return (
-                            <div key={m.moduleNum} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                            <div key={m.moduleNum} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700 h-full">
                               <div className="flex items-center justify-between gap-2 mb-2">
                                 <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
                                   {m.moduleNum}-modul (Uzum 1..{m.uzumMax}, Yandex 1..{m.yandexMax})
@@ -400,7 +400,7 @@ export function AdminPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs">
+                    <div className="flex flex-col items-start gap-2 text-xs lg:justify-start">
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-full ${u.isVerified ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'}`}>
                           {u.isVerified ? 'Tasdiqlangan' : 'Kutilmoqda'}
