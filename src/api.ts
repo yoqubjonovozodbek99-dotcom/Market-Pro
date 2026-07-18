@@ -207,9 +207,12 @@ export interface ApiSubscription {
   isActive: boolean
 }
 
+export type WrittenAccessMap = Record<number, { uzum: number; yandex: number }>
+
 export interface AdminStudent extends ApiUser {
   subscription: ApiSubscription | null
   accessDays: number
+  writtenAccess: WrittenAccessMap
   subscriptionDaysLeft: number
 }
 
@@ -249,7 +252,7 @@ export async function logoutUser() {
 }
 
 export async function fetchMe() {
-  return request<{ user: ApiUser; subscription: ApiSubscription | null; accessDays: number; isSubscribed: boolean }>('/api/me')
+  return request<{ user: ApiUser; subscription: ApiSubscription | null; accessDays: number; writtenAccess: WrittenAccessMap; isSubscribed: boolean }>('/api/me')
 }
 
 export async function fetchSubscriptionStatus() {
@@ -330,6 +333,24 @@ export async function saveAdminUserAccessDays(userId: string, accessDays: number
   return request<{ user: AdminStudent }>('/api/admin/users/' + userId + '/access-days', {
     method: 'POST',
     body: JSON.stringify({ accessDays }),
+  })
+}
+
+export async function saveAdminUserWrittenAccess(
+  userId: string,
+  moduleNum: number,
+  track: 'uzum' | 'yandex',
+  openLessons: number,
+) {
+  return request<{
+    userId: string
+    moduleNum: number
+    track: 'uzum' | 'yandex'
+    openLessons: number
+    writtenAccess: WrittenAccessMap
+  }>('/api/admin/users/' + userId + '/written-access', {
+    method: 'POST',
+    body: JSON.stringify({ moduleNum, track, openLessons }),
   })
 }
 

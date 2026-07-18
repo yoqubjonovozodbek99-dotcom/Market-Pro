@@ -81,11 +81,15 @@ export function WrittenLessonPage() {
       try {
         const me = await fetchMe()
 
-        const requiredDay = filteredLessons.findIndex((l) => l.id === lesson.id) + 1
+        const sameTrackLessons = mod.lessons.filter((l) => l.platform === lesson.platform)
+        const requiredDay = sameTrackLessons.findIndex((l) => l.id === lesson.id) + 1
+        const moduleAccess = (me as any)?.writtenAccess?.[mod.num] ?? { uzum: 0, yandex: 0 }
+        const trackKey = lesson.platform === 'yandex' ? 'yandex' : 'uzum'
+        const trackOpenCount = Number(moduleAccess?.[trackKey] ?? 0)
         const accessDays = Number(me.accessDays ?? 0)
         const fallbackDays = calcAvailableDay(me.subscription)
         const resolvedDays = Number.isFinite(accessDays) && accessDays >= 0 ? Math.max(accessDays, fallbackDays) : fallbackDays
-        const canOpen = resolvedDays >= requiredDay
+        const canOpen = trackOpenCount >= requiredDay || resolvedDays >= requiredDay
 
         if (mounted) {
           setAllowed(canOpen)

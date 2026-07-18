@@ -14,6 +14,80 @@ import {
 
 const router = Router()
 
+type WrittenTrack = 'uzum' | 'yandex'
+type UserWrittenAccessMap = Record<number, { uzum: number; yandex: number }>
+
+const WRITTEN_ACCESS_PREFIX = 'written-access:'
+
+function toWrittenTrack(input: unknown): WrittenTrack | null {
+  return input === 'uzum' || input === 'yandex' ? input : null
+}
+
+function buildWrittenAccessKey(userId: string, moduleNum: number, track: WrittenTrack) {
+  return `${WRITTEN_ACCESS_PREFIX}${userId}:m${moduleNum}:${track}`
+}
+
+function parseWrittenAccessKey(lessonKey: string): { userId: string; moduleNum: number; track: WrittenTrack } | null {
+  if (!lessonKey.startsWith(WRITTEN_ACCESS_PREFIX)) return null
+  const body = lessonKey.slice(WRITTEN_ACCESS_PREFIX.length)
+  const parts = body.split(':')
+  if (parts.length !== 3) return null
+  const [userId, modulePart, trackPart] = parts
+  const track = toWrittenTrack(trackPart)
+  if (!track || !modulePart.startsWith('m')) return null
+  const moduleNum = Number(modulePart.slice(1))
+  if (!Number.isFinite(moduleNum) || moduleNum < 1) return null
+  return { userId, moduleNum: Math.floor(moduleNum), track }
+}
+
+function clampOpenLessons(raw: unknown) {
+  const n = Number(raw)
+  if (!Number.isFinite(n)) return 0
+  return Math.max(0, Math.min(50, Math.floor(n)))
+}
+
+async function getWrittenAccessMapForUser(userId: string): Promise<UserWrittenAccessMap> {
+  const rows = await prisma.lessonDayConfig.findMany({
+    where: { lessonKey: { startsWith: `${WRITTEN_ACCESS_PREFIX}${userId}:` } },
+  })
+
+  const map: UserWrittenAccessMap = {}
+  for (const row of rows) {
+    const parsed = parseWrittenAccessKey(row.lessonKey)
+    if (!parsed || parsed.userId !== userId) continue
+    if (!map[parsed.moduleNum]) {
+      map[parsed.moduleNum] = { uzum: 0, yandex: 0 }
+    }
+    map[parsed.moduleNum][parsed.track] = Math.max(0, Number(row.availableDay) || 0)
+  }
+  return map
+}
+
+async function getWrittenAccessMapForUsers(userIds: string[]): Promise<Record<string, UserWrittenAccessMap>> {
+  const userSet = new Set(userIds)
+  const rows = await prisma.lessonDayConfig.findMany({
+    where: { lessonKey: { startsWith: WRITTEN_ACCESS_PREFIX } },
+  })
+
+  const byUser: Record<string, UserWrittenAccessMap> = {}
+  for (const userId of userIds) {
+    byUser[userId] = {}
+  }
+
+  for (const row of rows) {
+    const parsed = parseWrittenAccessKey(row.lessonKey)
+    if (!parsed || !userSet.has(parsed.userId)) continue
+
+    const map = byUser[parsed.userId]
+    if (!map[parsed.moduleNum]) {
+      map[parsed.moduleNum] = { uzum: 0, yandex: 0 }
+    }
+    map[parsed.moduleNum][parsed.track] = Math.max(0, Number(row.availableDay) || 0)
+  }
+
+  return byUser
+}
+
 function addDays(date: Date, days: number) {
   const nextDate = new Date(date)
   nextDate.setDate(nextDate.getDate() + days)
@@ -305,11 +379,13 @@ router.get('/me', requireAuth, async (req: AuthRequest, res) => {
 
     const subscription = await prisma.subscription.findUnique({ where: { userId: user.id } })
     const accessDays = calcSubscriptionDurationDays(subscription)
+    const writtenAccess = await getWrittenAccessMapForUser(user.id)
 
     res.json({
       user: sanitizeUser(user),
       subscription,
       accessDays,
+      writtenAccess,
       isSubscribed: Boolean(subscription?.isActive),
     })
   } catch (error) {
@@ -462,6 +538,8 @@ router.get('/admin/users', requireAuth, requireAdmin, async (_req, res) => {
       orderBy: { createdAt: 'desc' },
     })
 
+    const writtenAccessByUser = await getWrittenAccessMapForUsers(users.map((u) => u.id))
+
     const usersWithSubscription = await Promise.all(
       users.map(async (user) => {
         const subscription = await prisma.subscription.findUnique({ where: { userId: user.id } })
@@ -474,6 +552,7 @@ router.get('/admin/users', requireAuth, requireAdmin, async (_req, res) => {
           ...sanitizeUser(user),
           subscription,
           accessDays,
+          writtenAccess: writtenAccessByUser[user.id] ?? {},
           subscriptionDaysLeft,
         }
       })
@@ -544,6 +623,50 @@ router.post('/admin/users/:userId/access-days', requireAuth, requireAdmin, async
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to save access days' })
+  }
+})
+
+router.post('/admin/users/:userId/written-access', requireAuth, requireAdmin, async (req: AuthRequest, res) => {
+  try {
+    const { userId } = req.params
+    const moduleNum = Math.max(1, Math.min(20, Math.floor(Number(req.body?.moduleNum) || 0)))
+    const track = toWrittenTrack(req.body?.track)
+    const openLessons = clampOpenLessons(req.body?.openLessons)
+
+    if (!moduleNum || !track) {
+      return res.status(400).json({ error: 'moduleNum va track (uzum|yandex) talab qilinadi' })
+    }
+
+    const targetUser = await prisma.user.findUnique({ where: { id: userId } })
+    if (!targetUser || targetUser.role !== 'STUDENT') {
+      return res.status(404).json({ error: 'Student not found' })
+    }
+
+    const lessonKey = buildWrittenAccessKey(userId, moduleNum, track)
+
+    await prisma.lessonDayConfig.upsert({
+      where: { lessonKey },
+      create: {
+        lessonKey,
+        availableDay: openLessons,
+      },
+      update: {
+        availableDay: openLessons,
+      },
+    })
+
+    const writtenAccess = await getWrittenAccessMapForUser(userId)
+
+    res.json({
+      userId,
+      moduleNum,
+      track,
+      openLessons,
+      writtenAccess,
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to save written lesson access' })
   }
 })
 

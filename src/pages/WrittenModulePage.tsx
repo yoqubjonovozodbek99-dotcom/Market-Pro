@@ -30,6 +30,7 @@ export function WrittenModulePage() {
   const [track, setTrack] = useState<StudyTrack>('both')
 
   const [availableUpTo, setAvailableUpTo] = useState<number>(0)
+  const [writtenAccess, setWrittenAccess] = useState<Record<number, { uzum: number; yandex: number }>>({})
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
@@ -46,10 +47,12 @@ export function WrittenModulePage() {
         if (!mounted) return
 
         const serverAccessDays = Number((meRes as any)?.accessDays ?? accessDays)
+        const serverWrittenAccess = (meRes as any)?.writtenAccess ?? {}
         const sub = (meRes as any)?.subscription ?? null
         const fallbackDays = calcAvailableDay(sub)
         const resolved = Number.isFinite(serverAccessDays) && serverAccessDays >= 0 ? Math.max(serverAccessDays, fallbackDays) : fallbackDays
         setAvailableUpTo(resolved)
+        setWrittenAccess(serverWrittenAccess)
       } catch {
         if (Number.isFinite(accessDays) && accessDays >= 0) {
           setAvailableUpTo(accessDays)
@@ -122,9 +125,14 @@ export function WrittenModulePage() {
         {visibleLessons.map((lesson, index) => {
           const lessonTitle = lang === 'uz' ? lesson.title : lesson.titleRu
           const badge = platformBadge[lesson.platform]
-          const requiredDay = index + 1
           const isAdmin = user?.role === 'ADMIN'
-          const isOpen = isAdmin || !loaded || availableUpTo >= requiredDay
+          const trackKey = lesson.platform === 'yandex' ? 'yandex' : 'uzum'
+          const sameTrackLessons = mod.lessons.filter((l) => l.platform === lesson.platform)
+          const requiredDay = sameTrackLessons.findIndex((l) => l.id === lesson.id) + 1
+          const moduleAccess = writtenAccess[mod.num] ?? { uzum: 0, yandex: 0 }
+          const trackOpenCount = moduleAccess[trackKey]
+          const fallbackOpen = availableUpTo >= requiredDay
+          const isOpen = isAdmin || !loaded || trackOpenCount >= requiredDay || fallbackOpen
 
           if (!isOpen) {
             return (

@@ -10,20 +10,27 @@ import {
   fetchAdminPayments,
   confirmPayment,
   rejectPayment,
-  saveAdminUserAccessDays,
+  saveAdminUserWrittenAccess,
   type ApiUser,
   type AdminStudent,
   type AdminPayment,
 } from '../api'
+import { writtenModules } from '../data/writtenLessons'
 
 type Tab = 'users' | 'payments'
+type Track = 'uzum' | 'yandex'
+
+const moduleLimits = writtenModules
+  .map((mod) => ({
+    moduleNum: mod.num,
+    uzumMax: mod.lessons.filter((l) => l.platform === 'uzum').length,
+    yandexMax: mod.lessons.filter((l) => l.platform === 'yandex').length,
+  }))
+  .sort((a, b) => a.moduleNum - b.moduleNum)
+
+const accessKey = (userId: string, moduleNum: number, track: Track) => `${userId}:${moduleNum}:${track}`
 
 export function AdminPage() {
-  const MONTHLY_PRICE = 510000
-  const LESSONS_PER_MONTH = 12
-  const STUDY_DAYS_PER_WEEK = 3
-  const CALENDAR_DAYS_PER_WEEK = 7
-
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('users')
 
@@ -33,17 +40,9 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
-  const [accessDaysMap, setAccessDaysMap] = useState<Record<string, number>>({})
-  const [paymentAmountMap, setPaymentAmountMap] = useState<Record<string, number>>({})
-  const [accessDaysSavingId, setAccessDaysSavingId] = useState<string | null>(null)
+  const [writtenAccessMap, setWrittenAccessMap] = useState<Record<string, number>>({})
+  const [moduleSavingId, setModuleSavingId] = useState<string | null>(null)
   const [accessDaysMsg, setAccessDaysMsg] = useState('')
-
-  const calcSuggestedAccessDaysByAmount = (amount: number) => {
-    const lessonPrice = MONTHLY_PRICE / LESSONS_PER_MONTH
-    const lessonCount = amount / lessonPrice
-    const calendarDays = lessonCount * (CALENDAR_DAYS_PER_WEEK / STUDY_DAYS_PER_WEEK)
-    return Math.max(0, Math.min(365, Math.floor(calendarDays)))
-  }
 
   const load = () => {
     setLoading(true)
@@ -51,7 +50,15 @@ export function AdminPage() {
       .then(([pendingRes, allRes]) => {
         setPending(pendingRes.users)
         setAllStudents(allRes.users)
-        setAccessDaysMap(Object.fromEntries(allRes.users.map((u) => [u.id, u.accessDays])))
+        const nextMap: Record<string, number> = {}
+        allRes.users.forEach((u) => {
+          moduleLimits.forEach((m) => {
+            const moduleAccess = (u.writtenAccess as any)?.[m.moduleNum] ?? { uzum: 0, yandex: 0 }
+            nextMap[accessKey(u.id, m.moduleNum, 'uzum')] = Math.max(0, Math.min(m.uzumMax, Number(moduleAccess.uzum) || 0))
+            nextMap[accessKey(u.id, m.moduleNum, 'yandex')] = Math.max(0, Math.min(m.yandexMax, Number(moduleAccess.yandex) || 0))
+          })
+        })
+        setWrittenAccessMap(nextMap)
       })
       .catch((err) => setError(err instanceof Error ? err.message : 'Xatolik yuz berdi'))
       .finally(() => setLoading(false))
@@ -159,19 +166,44 @@ export function AdminPage() {
     }
   }
 
-  const handleSaveAccessDays = async (id: string) => {
-    setAccessDaysSavingId(id)
+  const setTrackAccessValue = (userId: string, moduleNum: number, track: Track, value: number) => {
+    const max = moduleLimits.find((m) => m.moduleNum === moduleNum)?.[track === 'uzum' ? 'uzumMax' : 'yandexMax'] ?? 0
+    const safe = Math.max(0, Math.min(max, Math.floor(value || 0)))
+    setWrittenAccessMap((prev) => ({
+      ...prev,
+      [accessKey(userId, moduleNum, track)]: safe,
+    }))
+  }
+
+  const handleQuickSet = (userId: string, moduleNum: number, track: Track, preset: 5 | 10 | 'all') => {
+    const limits = moduleLimits.find((m) => m.moduleNum === moduleNum)
+    const max = (track === 'uzum' ? limits?.uzumMax : limits?.yandexMax) ?? 0
+    const value = preset === 'all' ? max : Math.min(preset, max)
+    setTrackAccessValue(userId, moduleNum, track, value)
+  }
+
+  const handleSaveModuleAccess = async (userId: string, moduleNum: number) => {
+    const saveId = `${userId}:${moduleNum}`
+    setModuleSavingId(saveId)
     setAccessDaysMsg('')
     try {
-      const accessDays = Math.max(0, Math.min(365, accessDaysMap[id] ?? 0))
-      const res = await saveAdminUserAccessDays(id, accessDays)
-      setAllStudents((prev) => prev.map((u) => (u.id === id ? res.user : u)))
-      setAccessDaysMap((prev) => ({ ...prev, [id]: res.user.accessDays }))
-      setAccessDaysMsg(`${res.user.name} uchun ${res.user.accessDays} kun saqlandi`)
+      const uzum = writtenAccessMap[accessKey(userId, moduleNum, 'uzum')] ?? 0
+      const yandex = writtenAccessMap[accessKey(userId, moduleNum, 'yandex')] ?? 0
+
+      const [resUzum, resYandex] = await Promise.all([
+        saveAdminUserWrittenAccess(userId, moduleNum, 'uzum', uzum),
+        saveAdminUserWrittenAccess(userId, moduleNum, 'yandex', yandex),
+      ])
+
+      const mergedWrittenAccess = resYandex.writtenAccess ?? resUzum.writtenAccess
+      setAllStudents((prev) => prev.map((u) => (u.id === userId ? { ...u, writtenAccess: mergedWrittenAccess } : u)))
+
+      const studentName = allStudents.find((u) => u.id === userId)?.name ?? 'O‘quvchi'
+      setAccessDaysMsg(`${studentName}: ${moduleNum}-modul saqlandi (Uzum ${uzum}, Yandex ${yandex})`)
     } catch (err) {
       setAccessDaysMsg(err instanceof Error ? err.message : 'Saqlashda xatolik')
     } finally {
-      setAccessDaysSavingId(null)
+      setModuleSavingId(null)
     }
   }
 
@@ -224,7 +256,7 @@ export function AdminPage() {
             Yangi ro'yxatdan o'tgan o'quvchilar shu yerda ko'rinadi. Tasdiqlaganingizdan so'ng ular tizimga kira oladi.
           </p>
           <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
-            Har bir o'quvchi uchun dars ochilish kunini qo'lda kiriting va saqlang. Xohlasangiz to'lov summasi bo'yicha avtomatik hisoblab ham qo'yishingiz mumkin.
+            Har bir o'quvchi uchun modul kesimida Uzum/Yandex darslarining nechta qismi ochiq bo'lishini belgilang (masalan 5, 10 yoki hammasi).
           </p>
 
           {error && (
@@ -303,49 +335,72 @@ export function AdminPage() {
                         A'zo bo'lgan sana: {new Date(u.createdAt).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Darsga kirish: {u.accessDays > 0 ? `${u.accessDays} kun` : 'Yopiq'}
+                        Modul bo'yicha kirish: Uzum/Yandex alohida boshqariladi
+                      </div>
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <div className="grid gap-2">
+                        {moduleLimits.map((m) => {
+                          const uzumKey = accessKey(u.id, m.moduleNum, 'uzum')
+                          const yandexKey = accessKey(u.id, m.moduleNum, 'yandex')
+                          const uzumVal = writtenAccessMap[uzumKey] ?? 0
+                          const yandexVal = writtenAccessMap[yandexKey] ?? 0
+                          const saveId = `${u.id}:${m.moduleNum}`
+
+                          return (
+                            <div key={m.moduleNum} className="p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                              <div className="flex items-center justify-between gap-2 mb-2">
+                                <div className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                                  {m.moduleNum}-modul (Uzum 1..{m.uzumMax}, Yandex 1..{m.yandexMax})
+                                </div>
+                                <button
+                                  disabled={moduleSavingId === saveId}
+                                  onClick={() => handleSaveModuleAccess(u.id, m.moduleNum)}
+                                  className="px-2 py-1 rounded-md bg-uzum text-white text-xs font-medium disabled:opacity-50"
+                                >
+                                  {moduleSavingId === saveId ? 'Saqlanmoqda...' : 'Saqlash'}
+                                </button>
+                              </div>
+
+                              <div className="grid sm:grid-cols-2 gap-2 text-xs">
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className="font-medium text-gray-600 dark:text-gray-300">Uzum</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={m.uzumMax}
+                                    value={uzumVal}
+                                    onChange={(e) => setTrackAccessValue(u.id, m.moduleNum, 'uzum', parseInt(e.target.value) || 0)}
+                                    className="w-16 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                                  />
+                                  <button onClick={() => handleQuickSet(u.id, m.moduleNum, 'uzum', 5)} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">5</button>
+                                  <button onClick={() => handleQuickSet(u.id, m.moduleNum, 'uzum', 10)} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">10</button>
+                                  <button onClick={() => handleQuickSet(u.id, m.moduleNum, 'uzum', 'all')} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">Hammasi</button>
+                                </div>
+
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  <span className="font-medium text-gray-600 dark:text-gray-300">Yandex</span>
+                                  <input
+                                    type="number"
+                                    min={0}
+                                    max={m.yandexMax}
+                                    value={yandexVal}
+                                    onChange={(e) => setTrackAccessValue(u.id, m.moduleNum, 'yandex', parseInt(e.target.value) || 0)}
+                                    className="w-16 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                                  />
+                                  <button onClick={() => handleQuickSet(u.id, m.moduleNum, 'yandex', 5)} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">5</button>
+                                  <button onClick={() => handleQuickSet(u.id, m.moduleNum, 'yandex', 10)} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">10</button>
+                                  <button onClick={() => handleQuickSet(u.id, m.moduleNum, 'yandex', 'all')} className="px-2 py-1 rounded bg-gray-100 dark:bg-gray-800">Hammasi</button>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
                       </div>
                     </div>
 
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 text-xs">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          step={1000}
-                          value={paymentAmountMap[u.id] ?? ''}
-                          onChange={(e) => setPaymentAmountMap((prev) => ({ ...prev, [u.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
-                          placeholder="To'lov so'm"
-                          className="w-28 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                        <button
-                          onClick={() => {
-                            const amount = paymentAmountMap[u.id] ?? 0
-                            setAccessDaysMap((prev) => ({ ...prev, [u.id]: calcSuggestedAccessDaysByAmount(amount) }))
-                          }}
-                          className="px-2 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 text-xs font-medium"
-                        >
-                          Hisoblash
-                        </button>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="number"
-                          min={0}
-                          max={365}
-                          value={accessDaysMap[u.id] ?? u.accessDays}
-                          onChange={(e) => setAccessDaysMap((prev) => ({ ...prev, [u.id]: Math.max(0, Math.min(365, parseInt(e.target.value) || 0)) }))}
-                          placeholder="Kun"
-                          className="w-20 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
-                        />
-                        <button
-                          disabled={accessDaysSavingId === u.id}
-                          onClick={() => handleSaveAccessDays(u.id)}
-                          className="px-3 py-1.5 rounded-lg bg-uzum text-white hover:bg-uzum/90 text-xs font-medium disabled:opacity-50"
-                        >
-                          {accessDaysSavingId === u.id ? '...' : 'Saqlash'}
-                        </button>
-                      </div>
                       <div className="flex items-center gap-2">
                         <span className={`px-2 py-1 rounded-full ${u.isVerified ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-400' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-400'}`}>
                           {u.isVerified ? 'Tasdiqlangan' : 'Kutilmoqda'}
