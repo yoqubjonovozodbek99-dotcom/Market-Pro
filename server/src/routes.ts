@@ -18,6 +18,13 @@ type WrittenTrack = 'uzum' | 'yandex'
 type UserWrittenAccessMap = Record<number, { uzum: number; yandex: number }>
 
 const WRITTEN_ACCESS_PREFIX = 'written-access:'
+const WRITTEN_PROGRESS_PREFIX = 'written-progress:'
+const VIDEO_PROGRESS_PREFIX = 'video-progress:'
+
+const WRITTEN_TOTAL_LESSONS = 84
+const VIDEO_TOTAL_LESSONS = 82
+const WRITTEN_PLATFORM_TOTAL = { uzum: 42, yandex: 42 }
+const VIDEO_PLATFORM_TOTAL = { uzum: 41, yandex: 41 }
 
 function toWrittenTrack(input: unknown): WrittenTrack | null {
   return input === 'uzum' || input === 'yandex' ? input : null
@@ -44,6 +51,26 @@ function clampOpenLessons(raw: unknown) {
   const n = Number(raw)
   if (!Number.isFinite(n)) return 0
   return Math.max(0, Math.min(50, Math.floor(n)))
+}
+
+function buildWrittenProgressKey(userId: string, lessonKey: string) {
+  return `${WRITTEN_PROGRESS_PREFIX}${userId}:${lessonKey}`
+}
+
+function buildVideoProgressKey(userId: string, lessonKey: string) {
+  return `${VIDEO_PROGRESS_PREFIX}${userId}:${lessonKey}`
+}
+
+function getProgressPlatformFromLessonKey(lessonKey: string): 'uzum' | 'yandex' | null {
+  if (lessonKey.includes('-u') || lessonKey.includes('uzum')) return 'uzum'
+  if (lessonKey.includes('-y') || lessonKey.includes('yandex')) return 'yandex'
+  return null
+}
+
+function parseProgressRowKey(lessonKey: string, userId: string, prefix: string) {
+  const fullPrefix = `${prefix}${userId}:`
+  if (!lessonKey.startsWith(fullPrefix)) return null
+  return lessonKey.slice(fullPrefix.length)
 }
 
 async function getWrittenAccessMapForUser(userId: string): Promise<UserWrittenAccessMap> {
@@ -404,6 +431,8 @@ router.get('/me/progress', requireAuth, async (req: AuthRequest, res) => {
       completedLessons,
       watchedAggregate,
       recentCompleted,
+      writtenRows,
+      videoRows,
     ] = await Promise.all([
       prisma.lesson.findMany({
         select: {
@@ -453,55 +482,161 @@ router.get('/me/progress', requireAuth, async (req: AuthRequest, res) => {
           },
         },
       }),
+      prisma.lessonDayConfig.findMany({
+        where: {
+          lessonKey: { startsWith: `${WRITTEN_PROGRESS_PREFIX}${userId}:` },
+        },
+      }),
+      prisma.lessonDayConfig.findMany({
+        where: {
+          lessonKey: { startsWith: `${VIDEO_PROGRESS_PREFIX}${userId}:` },
+        },
+      }),
     ])
 
-    const totalLessons = lessons.length
-    const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0
+    const completedWrittenKeys = writtenRows
+      .filter((r) => Number(r.availableDay) > 0)
+      .map((r) => parseProgressRowKey(r.lessonKey, userId, WRITTEN_PROGRESS_PREFIX))
+      .filter((v): v is string => Boolean(v))
 
-    const totalByPlatform = {
-      uzum: lessons.filter((lesson) => {
-        const platform = lesson.module.course.platform
-        return platform === 'UZUM' || platform === 'BOTH'
-      }).length,
-      yandex: lessons.filter((lesson) => {
-        const platform = lesson.module.course.platform
-        return platform === 'YANDEX' || platform === 'BOTH'
-      }).length,
-    }
+    const completedVideoKeys = videoRows
+      .filter((r) => Number(r.availableDay) > 0)
+      .map((r) => parseProgressRowKey(r.lessonKey, userId, VIDEO_PROGRESS_PREFIX))
+      .filter((v): v is string => Boolean(v))
 
-    const completedByPlatform = {
-      uzum: completedProgress.filter((progress) => {
-        const platform = progress.lesson.module.course.platform
-        return platform === 'UZUM' || platform === 'BOTH'
-      }).length,
-      yandex: completedProgress.filter((progress) => {
-        const platform = progress.lesson.module.course.platform
-        return platform === 'YANDEX' || platform === 'BOTH'
-      }).length,
-    }
+    const dbTotal = lessons.length
+    const dbCompleted = completedLessons
+    const writtenCompleted = completedWrittenKeys.length
+    const videoCompleted = completedVideoKeys.length
+
+    const totalLessons = dbTotal + WRITTEN_TOTAL_LESSONS + VIDEO_TOTAL_LESSONS
+    const completedAll = dbCompleted + writtenCompleted + videoCompleted
+    const progressPercent = totalLessons > 0 ? Math.round((completedAll / totalLessons) * 100) : 0
+    const participationPercent = progressPercent
+    const certificateEligible = participationPercent >= 85
+
+    const totalUzum =
+      lessons.filter((l) => l.module.course.platform === 'UZUM' || l.module.course.platform === 'BOTH').length +
+      WRITTEN_PLATFORM_TOTAL.uzum +
+      VIDEO_PLATFORM_TOTAL.uzum
+    const totalYandex =
+      lessons.filter((l) => l.module.course.platform === 'YANDEX' || l.module.course.platform === 'BOTH').length +
+      WRITTEN_PLATFORM_TOTAL.yandex +
+      VIDEO_PLATFORM_TOTAL.yandex
+
+    const completedUzumDb = completedProgress.filter(
+      (p) => p.lesson.module.course.platform === 'UZUM' || p.lesson.module.course.platform === 'BOTH'
+    ).length
+    const completedYandexDb = completedProgress.filter(
+      (p) => p.lesson.module.course.platform === 'YANDEX' || p.lesson.module.course.platform === 'BOTH'
+    ).length
+
+    const completedUzumWritten = completedWrittenKeys.filter((k) => getProgressPlatformFromLessonKey(k) === 'uzum').length
+    const completedYandexWritten = completedWrittenKeys.filter((k) => getProgressPlatformFromLessonKey(k) === 'yandex').length
+    const completedUzumVideo = completedVideoKeys.filter((k) => getProgressPlatformFromLessonKey(k) === 'uzum').length
+    const completedYandexVideo = completedVideoKeys.filter((k) => getProgressPlatformFromLessonKey(k) === 'yandex').length
+
+    const completedUzum = completedUzumDb + completedUzumWritten + completedUzumVideo
+    const completedYandex = completedYandexDb + completedYandexWritten + completedYandexVideo
+
+    const mergedRecentActivity = [
+      ...recentCompleted.map((entry) => ({
+        lessonTitleUz: entry.lesson.titleUz,
+        lessonTitleRu: entry.lesson.titleRu,
+        completedAt: entry.completedAt?.toISOString() || new Date().toISOString(),
+      })),
+      ...writtenRows
+        .filter((r) => Number(r.availableDay) > 0)
+        .map((r) => ({
+          lessonTitleUz: `Yozma dars: ${parseProgressRowKey(r.lessonKey, userId, WRITTEN_PROGRESS_PREFIX) ?? ''}`,
+          lessonTitleRu: `Письменный урок: ${parseProgressRowKey(r.lessonKey, userId, WRITTEN_PROGRESS_PREFIX) ?? ''}`,
+          completedAt: r.updatedAt.toISOString(),
+        })),
+      ...videoRows
+        .filter((r) => Number(r.availableDay) > 0)
+        .map((r) => ({
+          lessonTitleUz: `Video dars: ${parseProgressRowKey(r.lessonKey, userId, VIDEO_PROGRESS_PREFIX) ?? ''}`,
+          lessonTitleRu: `Видео урок: ${parseProgressRowKey(r.lessonKey, userId, VIDEO_PROGRESS_PREFIX) ?? ''}`,
+          completedAt: r.updatedAt.toISOString(),
+        })),
+    ]
+      .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())
+      .slice(0, 10)
 
     res.json({
       totalLessons,
-      completedLessons,
+      completedLessons: completedAll,
       progressPercent,
+      participationPercent,
+      certificateEligible,
       watchedSeconds: watchedAggregate._sum.watchedSec ?? 0,
+      writtenCompleted,
+      writtenTotal: WRITTEN_TOTAL_LESSONS,
+      videoCompleted,
+      videoTotal: VIDEO_TOTAL_LESSONS,
+      completedWrittenKeys,
+      completedVideoKeys,
       uzum: {
-        total: totalByPlatform.uzum,
-        completed: completedByPlatform.uzum,
+        total: totalUzum,
+        completed: completedUzum,
       },
       yandex: {
-        total: totalByPlatform.yandex,
-        completed: completedByPlatform.yandex,
+        total: totalYandex,
+        completed: completedYandex,
       },
-      recentActivity: recentCompleted.map((item) => ({
-        lessonTitleUz: item.lesson.titleUz,
-        lessonTitleRu: item.lesson.titleRu,
-        completedAt: item.completedAt?.toISOString() ?? new Date().toISOString(),
-      })),
+      recentActivity: mergedRecentActivity,
     })
   } catch (error) {
     console.error(error)
     res.status(500).json({ error: 'Failed to load progress' })
+  }
+})
+
+router.post('/written-lessons/:lessonKey/progress', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!
+    const lessonKey = String(req.params.lessonKey || '').trim()
+    const isCompleted = Boolean(req.body?.isCompleted)
+
+    if (!lessonKey) {
+      return res.status(400).json({ error: 'lessonKey required' })
+    }
+
+    const key = buildWrittenProgressKey(userId, lessonKey)
+    await prisma.lessonDayConfig.upsert({
+      where: { lessonKey: key },
+      create: { lessonKey: key, availableDay: isCompleted ? 1 : 0 },
+      update: { availableDay: isCompleted ? 1 : 0 },
+    })
+
+    res.json({ lessonKey, isCompleted })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to update written progress' })
+  }
+})
+
+router.post('/video-lessons/:lessonKey/progress', requireAuth, async (req: AuthRequest, res) => {
+  try {
+    const userId = req.userId!
+    const lessonKey = String(req.params.lessonKey || '').trim()
+    const isCompleted = Boolean(req.body?.isCompleted)
+
+    if (!lessonKey) {
+      return res.status(400).json({ error: 'lessonKey required' })
+    }
+
+    const key = buildVideoProgressKey(userId, lessonKey)
+    await prisma.lessonDayConfig.upsert({
+      where: { lessonKey: key },
+      create: { lessonKey: key, availableDay: isCompleted ? 1 : 0 },
+      update: { availableDay: isCompleted ? 1 : 0 },
+    })
+
+    res.json({ lessonKey, isCompleted })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ error: 'Failed to update video progress' })
   }
 })
 

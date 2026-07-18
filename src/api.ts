@@ -263,7 +263,15 @@ export interface ProgressSummary {
   totalLessons: number
   completedLessons: number
   progressPercent: number
+  participationPercent: number
+  certificateEligible: boolean
   watchedSeconds: number
+  writtenCompleted: number
+  writtenTotal: number
+  videoCompleted: number
+  videoTotal: number
+  completedWrittenKeys: string[]
+  completedVideoKeys: string[]
   uzum: { total: number; completed: number }
   yandex: { total: number; completed: number }
   recentActivity: { lessonTitleUz: string; lessonTitleRu: string; completedAt: string }[]
@@ -271,6 +279,20 @@ export interface ProgressSummary {
 
 export async function fetchMyProgress() {
   return request<ProgressSummary>('/api/me/progress')
+}
+
+export async function markWrittenLessonProgress(lessonKey: string, isCompleted: boolean) {
+  return request<{ lessonKey: string; isCompleted: boolean }>(`/api/written-lessons/${encodeURIComponent(lessonKey)}/progress`, {
+    method: 'POST',
+    body: JSON.stringify({ isCompleted }),
+  })
+}
+
+export async function markVideoLessonProgress(lessonKey: string, isCompleted: boolean) {
+  return request<{ lessonKey: string; isCompleted: boolean }>(`/api/video-lessons/${encodeURIComponent(lessonKey)}/progress`, {
+    method: 'POST',
+    body: JSON.stringify({ isCompleted }),
+  })
 }
 
 // ===== PAYMENTS =====

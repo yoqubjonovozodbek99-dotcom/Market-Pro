@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Play, Clock, Lock, ArrowLeft } from 'lucide-react'
+import { Play, Clock, ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { videoLessons, type Platform } from '../data/content'
+import { fetchMyProgress, markVideoLessonProgress } from '../api'
 
 type Filter = 'all' | Platform
 
@@ -11,6 +12,28 @@ export function VideoLessonsPage() {
   const location = useLocation()
   const initialFilter = (location.state as { platform?: Platform })?.platform ?? 'all'
   const [filter, setFilter] = useState<Filter>(initialFilter)
+  const [completedKeys, setCompletedKeys] = useState<Set<string>>(new Set())
+  const [savingKey, setSavingKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    let mounted = true
+    fetchMyProgress()
+      .then((p) => {
+        if (!mounted) return
+        setCompletedKeys(new Set(p.completedVideoKeys ?? []))
+      })
+      .catch(() => {
+        if (mounted) setCompletedKeys(new Set())
+      })
+    return () => {
+      mounted = false
+    }
+  }, [])
+
+  const makeVideoLessonKey = (video: (typeof videoLessons)[number]) =>
+    `m${video.moduleNum}-${video.platform}-${video.id}`
+
+  const completedCount = useMemo(() => completedKeys.size, [completedKeys])
 
   const filtered =
     filter === 'all' ? videoLessons : videoLessons.filter((v) => v.platform === filter)
@@ -114,11 +137,35 @@ export function VideoLessonsPage() {
                 </h3>
                 <button
                   type="button"
-                  className="mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 cursor-not-allowed"
-                  disabled
+                  onClick={async () => {
+                    const lessonKey = makeVideoLessonKey(video)
+                    const next = !completedKeys.has(lessonKey)
+                    setSavingKey(lessonKey)
+                    try {
+                      await markVideoLessonProgress(lessonKey, next)
+                      setCompletedKeys((prev) => {
+                        const nextSet = new Set(prev)
+                        if (next) nextSet.add(lessonKey)
+                        else nextSet.delete(lessonKey)
+                        return nextSet
+                      })
+                    } finally {
+                      setSavingKey(null)
+                    }
+                  }}
+                  disabled={savingKey === makeVideoLessonKey(video)}
+                  className={`mt-3 w-full flex items-center justify-center gap-2 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${
+                    completedKeys.has(makeVideoLessonKey(video))
+                      ? 'bg-green-100 dark:bg-green-500/20 text-green-700 dark:text-green-300'
+                      : 'bg-uzum text-white hover:bg-uzum/90'
+                  }`}
                 >
-                  <Lock className="w-4 h-4" />
-                  {t.videos.locked}
+                  <CheckCircle2 className="w-4 h-4" />
+                  {savingKey === makeVideoLessonKey(video)
+                    ? (lang === 'uz' ? 'Saqlanmoqda...' : 'Сохранение...')
+                    : completedKeys.has(makeVideoLessonKey(video))
+                      ? (lang === 'uz' ? 'Ko\'rib bo\'ldim (bekor qilish)' : 'Просмотрено (отменить)')
+                      : (lang === 'uz' ? 'Ko\'rib bo\'ldim' : 'Просмотрено')}
                 </button>
               </div>
             </div>
@@ -127,7 +174,7 @@ export function VideoLessonsPage() {
       </div>
 
       <p className="text-center text-sm text-gray-400 mt-10">
-        {filtered.length} / {videoLessons.length} {t.stats.videos.toLowerCase()}
+        {filtered.length} / {videoLessons.length} {t.stats.videos.toLowerCase()} • {lang === 'uz' ? 'Tugatilgan' : 'Завершено'}: {completedCount}
       </p>
       </div>
     </div>

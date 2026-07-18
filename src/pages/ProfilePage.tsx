@@ -69,6 +69,8 @@ export function ProfilePage() {
     : '-'
 
   const progressPercent = progress?.progressPercent ?? 0
+  const participationPercent = progress?.participationPercent ?? progressPercent
+  const certificateEligible = progress?.certificateEligible ?? false
   const completedLessons = progress?.completedLessons ?? 0
   const totalLessons = progress?.totalLessons ?? 0
   const watchedHours = Math.round(((progress?.watchedSeconds ?? 0) / 3600) * 10) / 10
@@ -211,12 +213,12 @@ export function ProfilePage() {
           <div className="p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
             <div className="flex justify-between items-center mb-4">
               <h3 className="font-bold text-gray-900 dark:text-white">{t.profile.progress}</h3>
-              <span className="text-2xl font-black text-uzum dark:text-blue-400">{progressPercent}%</span>
+              <span className="text-2xl font-black text-uzum dark:text-blue-400">{participationPercent}%</span>
             </div>
             <div className="h-4 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden mb-6">
               <div
                 className="h-full gradient-brand rounded-full transition-all duration-500"
-                style={{ width: `${progressPercent}%` }}
+                style={{ width: `${participationPercent}%` }}
               />
             </div>
 
@@ -248,6 +250,26 @@ export function ProfilePage() {
                     ? new Date(recentActivity[0].completedAt).toLocaleDateString(lang === 'uz' ? 'uz-UZ' : 'ru-RU')
                     : (lang === 'uz' ? 'Faollik hali yo\'q' : 'Активности пока нет')}
                 </div>
+              </div>
+            </div>
+
+            <div className={`mt-5 p-4 rounded-xl border ${certificateEligible ? 'border-green-300 dark:border-green-700 bg-green-50 dark:bg-green-500/10' : 'border-yellow-300 dark:border-yellow-700 bg-yellow-50 dark:bg-yellow-500/10'}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {lang === 'uz' ? 'Sertifikat mezoni (85%+)' : 'Критерий сертификата (85%+)'}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+                    {lang === 'uz'
+                      ? `Ishtirok: ${participationPercent}%. Sertifikat uchun kamida 85% kerak.`
+                      : `Участие: ${participationPercent}%. Для сертификата нужно минимум 85%.`}
+                  </p>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold ${certificateEligible ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300' : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-500/20 dark:text-yellow-300'}`}>
+                  {certificateEligible
+                    ? (lang === 'uz' ? 'Sertifikatga mos' : 'Подходит для сертификата')
+                    : (lang === 'uz' ? 'Hali yetarli emas' : 'Пока недостаточно')}
+                </span>
               </div>
             </div>
           </div>

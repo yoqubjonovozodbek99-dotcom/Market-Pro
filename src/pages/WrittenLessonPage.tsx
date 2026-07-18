@@ -1,9 +1,9 @@
 import { Link, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
-import { ArrowLeft, Clock, ChevronLeft, ChevronRight, Lock } from 'lucide-react'
+import { ArrowLeft, Clock, ChevronLeft, ChevronRight, Lock, CheckCircle2 } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
-import { fetchMe, fetchSubscriptionStatus } from '../api'
+import { fetchMe, fetchMyProgress, fetchSubscriptionStatus, markWrittenLessonProgress } from '../api'
 import { getWrittenLesson, getWrittenModule } from '../data/writtenLessons'
 import { getStudyTrack, matchesTrack, type StudyTrack } from '../data/writtenLessons/track'
 import { LessonContent } from '../components/LessonContent'
@@ -23,6 +23,8 @@ export function WrittenLessonPage() {
   const [allowed, setAllowed] = useState<boolean>(true)
   const [checking, setChecking] = useState<boolean>(true)
   const [track, setTrack] = useState<StudyTrack>('both')
+  const [isCompleted, setIsCompleted] = useState(false)
+  const [savingProgress, setSavingProgress] = useState(false)
 
   const mod = moduleSlug ? getWrittenModule(moduleSlug) : undefined
   const lesson = moduleSlug && lessonId ? getWrittenLesson(moduleSlug, lessonId) : undefined
@@ -49,6 +51,23 @@ export function WrittenLessonPage() {
   useEffect(() => {
     setTrack(getStudyTrack())
   }, [])
+
+  useEffect(() => {
+    let mounted = true
+
+    fetchMyProgress()
+      .then((p) => {
+        if (!mounted || !lesson) return
+        setIsCompleted((p.completedWrittenKeys ?? []).includes(lesson.id))
+      })
+      .catch(() => {
+        if (mounted) setIsCompleted(false)
+      })
+
+    return () => {
+      mounted = false
+    }
+  }, [lesson?.id])
 
   useEffect(() => {
     let mounted = true
@@ -154,6 +173,18 @@ export function WrittenLessonPage() {
     )
   }
 
+  const toggleCompleted = async () => {
+    if (!lesson) return
+    setSavingProgress(true)
+    try {
+      const next = !isCompleted
+      await markWrittenLessonProgress(lesson.id, next)
+      setIsCompleted(next)
+    } finally {
+      setSavingProgress(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm">
       <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 md:py-16">
@@ -179,6 +210,26 @@ export function WrittenLessonPage() {
       </header>
 
       <LessonContent blocks={lesson.blocks} />
+
+      <div className="mt-8 p-4 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <button
+          type="button"
+          onClick={toggleCompleted}
+          disabled={savingProgress}
+          className={`w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-lg text-sm font-semibold transition-colors disabled:opacity-60 ${
+            isCompleted
+              ? 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300'
+              : 'bg-uzum text-white hover:bg-uzum/90'
+          }`}
+        >
+          <CheckCircle2 className="w-5 h-5" />
+          {savingProgress
+            ? (lang === 'uz' ? 'Saqlanmoqda...' : 'Сохранение...')
+            : isCompleted
+              ? (lang === 'uz' ? 'Tugatildi (bekor qilish)' : 'Завершено (отменить)')
+              : (lang === 'uz' ? 'Tugatdim' : 'Завершил урок')}
+        </button>
+      </div>
 
       <nav className="mt-12 pt-8 border-t border-gray-200 dark:border-gray-800 grid sm:grid-cols-2 gap-4">
         {prev ? (
