@@ -31,6 +31,11 @@ const moduleLimits = writtenModules
 const accessKey = (userId: string, moduleNum: number, track: Track) => `${userId}:${moduleNum}:${track}`
 
 export function AdminPage() {
+  const LESSON_PRICE_UZS = 39230.77
+  const LESSONS_PER_MONTH = 13
+  const STUDY_DAYS_PER_WEEK = 3
+  const CALENDAR_DAYS_PER_WEEK = 7
+
   const { user } = useAuth()
   const [activeTab, setActiveTab] = useState<Tab>('users')
 
@@ -41,6 +46,7 @@ export function AdminPage() {
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [writtenAccessMap, setWrittenAccessMap] = useState<Record<string, number>>({})
+  const [paymentAmountMap, setPaymentAmountMap] = useState<Record<string, number>>({})
   const [moduleSavingId, setModuleSavingId] = useState<string | null>(null)
   const [accessDaysMsg, setAccessDaysMsg] = useState('')
 
@@ -180,6 +186,38 @@ export function AdminPage() {
     const max = (track === 'uzum' ? limits?.uzumMax : limits?.yandexMax) ?? 0
     const value = preset === 'all' ? max : Math.min(preset, max)
     setTrackAccessValue(userId, moduleNum, track, value)
+  }
+
+  const calcLessonCountByAmount = (amount: number) => {
+    if (!Number.isFinite(amount) || amount <= 0) return 0
+    return Math.max(0, Math.floor(amount / LESSON_PRICE_UZS))
+  }
+
+  const calcCalendarDaysByLessonCount = (lessonCount: number) => {
+    const days = lessonCount * (CALENDAR_DAYS_PER_WEEK / STUDY_DAYS_PER_WEEK)
+    return Math.max(0, Math.floor(days))
+  }
+
+  const applyAutoByAmount = (userId: string) => {
+    const amount = paymentAmountMap[userId] ?? 0
+    const lessonCount = calcLessonCountByAmount(amount)
+
+    let remainingUzum = lessonCount
+    let remainingYandex = lessonCount
+
+    moduleLimits.forEach((m) => {
+      const uzumOpen = Math.max(0, Math.min(m.uzumMax, remainingUzum))
+      const yandexOpen = Math.max(0, Math.min(m.yandexMax, remainingYandex))
+
+      setTrackAccessValue(userId, m.moduleNum, 'uzum', uzumOpen)
+      setTrackAccessValue(userId, m.moduleNum, 'yandex', yandexOpen)
+
+      remainingUzum -= uzumOpen
+      remainingYandex -= yandexOpen
+    })
+
+    const approxDays = calcCalendarDaysByLessonCount(lessonCount)
+    setAccessDaysMsg(`Avto-hisob: ${amount.toLocaleString('uz-UZ')} so'm ≈ ${lessonCount} ta dars (taxm. ${approxDays} kunlik jadval)`)
   }
 
   const handleSaveModuleAccess = async (userId: string, moduleNum: number) => {
@@ -340,6 +378,30 @@ export function AdminPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
+                      <div className="mb-2 p-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50/70 dark:bg-gray-800/40">
+                        <div className="flex flex-wrap items-center gap-2 text-xs">
+                          <span className="font-semibold text-gray-700 dark:text-gray-300">Avto-hisob:</span>
+                          <input
+                            type="number"
+                            min={0}
+                            step={1000}
+                            value={paymentAmountMap[u.id] ?? ''}
+                            onChange={(e) => setPaymentAmountMap((prev) => ({ ...prev, [u.id]: Math.max(0, parseInt(e.target.value) || 0) }))}
+                            placeholder="To'lov so'm"
+                            className="w-32 px-2 py-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800"
+                          />
+                          <button
+                            onClick={() => applyAutoByAmount(u.id)}
+                            className="px-2 py-1 rounded-md bg-uzum text-white text-xs font-medium"
+                          >
+                            Avtomatik hisoblash
+                          </button>
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                            1 dars = 39 230.77 so'm ({LESSONS_PER_MONTH} dars/oy, Dush/Chor/Juma)
+                          </span>
+                        </div>
+                      </div>
+
                       <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                         {moduleLimits.map((m) => {
                           const uzumKey = accessKey(u.id, m.moduleNum, 'uzum')
